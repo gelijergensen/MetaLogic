@@ -1,10 +1,9 @@
 module PropositionalLogic where
 
+import qualified Assignment
 import Control.Applicative (liftA2)
-import qualified Data.Map as Map
+import qualified Data.Bifunctor as Bifunc
 import qualified OperatorSymbols as OS
-
-type PropositionalSymbol a = OS.Symbol String a
 
 data PropFormula a
   = Truth
@@ -15,15 +14,26 @@ data PropFormula a
   | Or (PropFormula a) (PropFormula a)
   deriving (Eq, Show)
 
-newtype Assignment a = Assignment (Map.Map a Bool) deriving (Eq, Show)
+newtype PartialFormula a
+  = PartialFormula (PropFormula a)
+  deriving (Eq, Show)
 
-type AssignError = String
+-- instance Functor (PartialFormula a) where
+--   fmap f (Value v) = Value $ f v
+--   fmap _ (PartialFormula x) = PartialFormula x
+
+-- instance Applicative (PartialFormula a) where
+--   pure = Value
+--   Value f <*> Value a = Value $ f a
 
 evaluate ::
-  (Ord a, Show a) => Assignment a -> PropFormula a -> Either AssignError Bool
+  (Ord a, Show a) =>
+  Assignment.Assignment a ->
+  PropFormula a ->
+  Either Assignment.AssignError Bool
 evaluate _ Truth = Right True
 evaluate _ Fiction = Right False
-evaluate asgns (Variable a) = assign asgns a
+evaluate asgns (Variable a) = Assignment.assign asgns a
 evaluate asgns (Not a) = not <$> evaluate asgns a
 evaluate asgns (And l r) = case (evaluate asgns l, evaluate asgns r) of
   (Right False, _) -> Right False
@@ -34,28 +44,30 @@ evaluate asgns (Or l r) = case (evaluate asgns l, evaluate asgns r) of
   (_, Right True) -> Right True
   (l', r') -> liftA2 (&&) l' r'
 
-assign :: (Ord a, Show a) => Assignment a -> a -> Either AssignError Bool
-assign (Assignment as) a = case Map.lookup a as of
-  Just x -> Right x
-  Nothing -> Left $ "AssignError: Value of " ++ show a ++ " not given"
-
-emptyAssignment :: Assignment a
-emptyAssignment = Assignment Map.empty
-
--- fiction :: PropositionalSymbol a
--- fiction = OS.Symbol "FICTION" OS.Constant
-
--- truth :: PropositionalSymbol a
--- truth = OS.Symbol "TRUTH" OS.Constant
-
--- not :: a -> PropositionalSymbol a
--- not a = OS.Symbol "NOT" $ OS.Unary a
-
--- and :: a -> a -> PropositionalSymbol a
--- and l r = OS.Symbol "AND" $ OS.Binary l r
-
--- or :: a -> a -> PropositionalSymbol a
--- or l r = OS.Symbol "OR" $ OS.Binary l r
-
--- implies :: a -> a -> PropositionalSymbol a
--- implies l r = OS.Symbol "IMPLIES" $ OS.Binary l r
+simplify ::
+  (Ord a, Show a) =>
+  Assignment.Assignment a ->
+  PropFormula a ->
+  PartialFormula a
+simplify _ Truth = PartialFormula Truth
+simplify _ Fiction = PartialFormula Fiction
+simplify asgns v@(Variable a) = case Assignment.assign asgns a of
+  (Right True) -> PartialFormula Truth
+  (Right False) -> PartialFormula Fiction
+  (Left _) -> PartialFormula v
+simplify asgns (Not a) = case simplify asgns a of
+  PartialFormula Truth -> PartialFormula Fiction
+  PartialFormula Fiction -> PartialFormula Truth
+  PartialFormula x -> PartialFormula $ Not x
+simplify asgns (And l r) = case (simplify asgns l, simplify asgns r) of
+  (PartialFormula Truth, x) -> x
+  (y, PartialFormula Truth) -> y
+  (PartialFormula Fiction, _) -> PartialFormula Fiction
+  (_, PartialFormula Fiction) -> PartialFormula Fiction
+  (PartialFormula l', PartialFormula r') -> PartialFormula (And l' r')
+simplify asgns (Or l r) = case (simplify asgns l, simplify asgns r) of
+  (PartialFormula Truth, _) -> PartialFormula Truth
+  (_, PartialFormula Truth) -> PartialFormula Truth
+  (PartialFormula Fiction, x) -> x
+  (y, PartialFormula Fiction) -> y
+  (PartialFormula l', PartialFormula r') -> PartialFormula (Or l' r')

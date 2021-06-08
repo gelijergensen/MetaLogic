@@ -46,3 +46,23 @@ Quaternary {} !! i =
 Quinary {} !! i =
   error $ "Out of index in call to OperatorSymbols.(!!): Quinary " ++ show i
 (Variadic as) !! i = Seq.index as i
+
+-- type PropositionalSymbol a = OS.Symbol String a
+
+-- fiction :: PropositionalSymbol a
+-- fiction = OS.Symbol "FICTION" OS.Constant
+
+-- truth :: PropositionalSymbol a
+-- truth = OS.Symbol "TRUTH" OS.Constant
+
+-- not :: a -> PropositionalSymbol a
+-- not a = OS.Symbol "NOT" $ OS.Unary a
+
+-- and :: a -> a -> PropositionalSymbol a
+-- and l r = OS.Symbol "AND" $ OS.Binary l r
+
+-- or :: a -> a -> PropositionalSymbol a
+-- or l r = OS.Symbol "OR" $ OS.Binary l r
+
+-- implies :: a -> a -> PropositionalSymbol a
+-- implies l r = OS.Symbol "IMPLIES" $ OS.Binary l r
