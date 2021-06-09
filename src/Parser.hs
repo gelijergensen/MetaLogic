@@ -2,8 +2,11 @@
 
 module Parser where
 
-import Control.Applicative (liftA2)
+import Control.Monad (liftM2)
+import qualified Data.Char as Char
+import qualified Data.List as List
 import Text.Parsec
+import Text.Parsec.Pos (updatePosString)
 
 data AST a
   = Leaf
@@ -15,45 +18,75 @@ data AST a
       }
   deriving (Eq, Show)
 
-ast :: Stream s m Char => ParsecT s u m (AST a)
+data OperatorName
+  = Symbols String
+  | Identifier String
+
+parseAST :: String -> Either ParseError (AST a)
+parseAST = parse ast "" . tokenize
+
+ast :: Stream s m String => ParsecT s u m (AST a)
 ast = maybeWrapped (leaf <|> node)
 
-leafOrNode :: Stream s m Char => ParsecT s u m (AST a)
-leafOrNode = maybeSpaced leaf <|> wrapped (maybeWrapped node)
+leafOrNode :: Stream s m String => ParsecT s u m (AST a)
+leafOrNode = leaf <|> wrapped (maybeWrapped node)
 
-leaf :: Stream s m Char => ParsecT s u m (AST a)
+leaf :: Stream s m String => ParsecT s u m (AST a)
 leaf = Leaf <$> identifier
 
-node :: Stream s m Char => ParsecT s u m (AST a)
-node = liftA2 f nodeName arguments
-  where
-    f n [] = Leaf n
-    f n xs = Node n xs
+node :: Stream s m String => ParsecT s u m (AST a)
+node = do
+  n <- nodeName
+  xs <- arguments
+  case (n, xs) of
+    (Symbols n', []) ->
+      fail "Likely problem: operators named with symbols need arguments"
+    (Identifier n', []) -> return $ Leaf n'
+    (Symbols n', xs') -> return $ Node n' xs'
+    (Identifier n', xs') -> return $ Node n' xs'
 
-nodeName :: Stream s m Char => ParsecT s u m String
-nodeName = maybeWrapped (operator <|> identifier)
+nodeName :: Stream s m String => ParsecT s u m OperatorName
+nodeName = maybeWrapped (Symbols <$> operator <|> Identifier <$> identifier)
 
-identifier :: Stream s m Char => ParsecT s u m String
-identifier = many1 letter <> many alphaNum <?> "identifier"
-
-operator :: Stream s m Char => ParsecT s u m String
-operator = many1 symbol <?> "operator"
-
-symbol :: Stream s m Char => ParsecT s u m Char
-symbol = oneOf ".,:;'/<>?~!@#$%^&*-+=|\\"
-
-arguments :: Stream s m Char => ParsecT s u m [AST a]
+arguments :: Stream s m String => ParsecT s u m [AST a]
 arguments = many leafOrNode
 
--- For flexibility with spaces and nested parentheses
-maybeWrapped :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
-maybeWrapped p = try (maybeSpaced p) <|> wrapped (maybeWrapped p)
+-- For flexibility with nested parentheses
+maybeWrapped :: Stream s m String => ParsecT s u m t -> ParsecT s u m t
+maybeWrapped p = try p <|> wrapped (maybeWrapped p)
 
-wrapped :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
-wrapped = maybeSpaced . parenthesized . maybeSpaced
+wrapped :: Stream s m String => ParsecT s u m t -> ParsecT s u m t
+wrapped = between (word "(") (word ")")
 
-parenthesized :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
-parenthesized = between (char '(') (char ')')
+-- Custom parsers which process individual strings at the char level
+identifier :: Stream s m String => ParsecT s u m String
+identifier = satisfyWord f
+  where
+    f x = Char.isLetter (head x) && all Char.isAlphaNum (tail x)
 
-maybeSpaced :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
-maybeSpaced = between spaces spaces
+operator :: Stream s m String => ParsecT s u m String
+operator = satisfyWord f
+  where
+    f = all (`elem` ".,:;'/<>?~!@#$%^&*-+=|\\")
+
+word :: Stream s m String => String -> ParsecT s u m String
+word w = satisfyWord (== w) <?> w
+
+-- Custom parser for processing tokens of words at the string level
+satisfyWord :: Stream s m String => (String -> Bool) -> ParsecT s u m String
+satisfyWord f =
+  tokenPrim showWord nextPos testWord
+  where
+    showWord x = "\"" ++ x ++ "\""
+    testWord x = if f x then Just x else Nothing
+    nextPos pos x xs = updatePosString pos x
+
+-- Break tokens on each whitespace or parenthesis
+tokenize :: String -> [String]
+tokenize = filter (not . Char.isSpace . head) . List.groupBy f
+  where
+    f '(' _ = False
+    f _ '(' = False
+    f ')' _ = False
+    f _ ')' = False
+    f x y = Char.isSpace x == Char.isSpace y
