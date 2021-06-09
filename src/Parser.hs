@@ -3,54 +3,57 @@
 module Parser where
 
 import Control.Applicative (liftA2)
-import Data.Sequence as Seq
 import Text.Parsec
 
 data AST a
-  = Variable
-      { variableName :: String
+  = Leaf
+      { leafName :: String
       }
-  | Operator
-      { operatorName :: String,
-        args :: Seq.Seq (AST a)
+  | Node
+      { name :: String,
+        args :: [AST a]
       }
   deriving (Eq, Show)
 
 ast :: Stream s m Char => ParsecT s u m (AST a)
-ast = variable <|> operator
+ast = maybeWrapped (leaf <|> node)
 
-variable :: Stream s m Char => ParsecT s u m (AST a)
-variable = Variable <$> identifier <?> "single variable"
+leafOrNode :: Stream s m Char => ParsecT s u m (AST a)
+leafOrNode = maybeSpaced leaf <|> wrapped (maybeWrapped node)
 
-operator :: Stream s m Char => ParsecT s u m (AST a)
-operator =
-  liftA2 Operator operatorString arguments
+leaf :: Stream s m Char => ParsecT s u m (AST a)
+leaf = Leaf <$> identifier
 
-arguments :: Stream s m Char => ParsecT s u m (Seq.Seq (AST a))
-arguments =
-  Seq.fromList
-    <$> parenthesized (spaced (ast `sepEndBy` many1 space))
-    <?> "args list in parentheses"
+node :: Stream s m Char => ParsecT s u m (AST a)
+node = liftA2 f nodeName arguments
+  where
+    f n [] = Leaf n
+    f n xs = Node n xs
 
-operatorString :: Stream s m Char => ParsecT s u m String
-operatorString =
-  spaced
-    ( symbols
-        <|> parenthesized (spaced identifier <?> "named operator")
-        <?> "operator"
-    )
+nodeName :: Stream s m Char => ParsecT s u m String
+nodeName = maybeWrapped (operator <|> identifier)
 
 identifier :: Stream s m Char => ParsecT s u m String
 identifier = many1 letter <> many alphaNum <?> "identifier"
 
-symbols :: Stream s m Char => ParsecT s u m String
-symbols = many1 symbol
+operator :: Stream s m Char => ParsecT s u m String
+operator = many1 symbol <?> "operator"
 
 symbol :: Stream s m Char => ParsecT s u m Char
 symbol = oneOf ".,:;'/<>?~!@#$%^&*-+=|\\"
 
+arguments :: Stream s m Char => ParsecT s u m [AST a]
+arguments = many leafOrNode
+
+-- For flexibility with spaces and nested parentheses
+maybeWrapped :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
+maybeWrapped p = try (maybeSpaced p) <|> wrapped (maybeWrapped p)
+
+wrapped :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
+wrapped = maybeSpaced . parenthesized . maybeSpaced
+
 parenthesized :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
 parenthesized = between (char '(') (char ')')
 
-spaced :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
-spaced = between spaces spaces
+maybeSpaced :: Stream s m Char => ParsecT s u m t -> ParsecT s u m t
+maybeSpaced = between spaces spaces
