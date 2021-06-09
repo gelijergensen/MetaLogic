@@ -3,6 +3,7 @@ module PropositionalLogic where
 import qualified Assignment
 import Control.Applicative (liftA2)
 import qualified Data.Bifunctor as Bifunc
+import qualified Data.Set as Set
 import qualified OperatorSymbols as OS
 
 data PropFormula a
@@ -71,3 +72,11 @@ simplify asgns (Or l r) = case (simplify asgns l, simplify asgns r) of
   (PartialFormula Fiction, x) -> x
   (y, PartialFormula Fiction) -> y
   (PartialFormula l', PartialFormula r') -> PartialFormula (Or l' r')
+
+variables :: Ord a => PropFormula a -> Set.Set a
+variables Truth = Set.empty
+variables Fiction = Set.empty
+variables (Variable a) = Set.singleton a
+variables (Not x) = variables x
+variables (And l r) = Set.union (variables l) (variables r)
+variables (Or l r) = Set.union (variables l) (variables r)

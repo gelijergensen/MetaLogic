@@ -51,10 +51,10 @@ extra-source-files:
 
 library
     -- Modules exported by the library.
-    exposed-modules:  Main
+    exposed-modules:  Main, PropositionalLogic, Assignment
 
     -- Modules included in this library but not exported.
-    other-modules:    OperatorSymbols, PropositionalLogic
+    other-modules:    OperatorSymbols
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -79,7 +79,16 @@ test-suite MetaLogic-test
     hs-source-dirs:   test
 
     -- The entrypoint to the test suite.
-    main-is:          MyLibTest.hs
+    main-is:          Spec.hs
+
+    other-modules:    PropositionalLogicSpec
 
     -- Test dependencies.
-    build-depends:    base ^>=4.14.1.0
+    build-depends:    
+        base ^>=4.14.1.0
+      , containers
+      , hspec
+      , QuickCheck
+      , MetaLogic
+
+    build-tool-depends: hspec-discover:hspec-discover
