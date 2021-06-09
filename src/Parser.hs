@@ -16,11 +16,15 @@ data AST a
       { name :: String,
         args :: [AST a]
       }
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data OperatorName
   = Symbols String
   | Identifier String
+
+instance Show a => Show (AST a) where
+  show (Leaf x) = x
+  show (Node x ys) = "(" ++ x ++ " " ++ List.unwords (map show ys) ++ ")"
 
 parseAST :: String -> Either ParseError (AST a)
 parseAST = parse ast "" . tokenize
@@ -38,12 +42,13 @@ node :: Stream s m String => ParsecT s u m (AST a)
 node = do
   n <- nodeName
   xs <- arguments
-  case (n, xs) of
-    (Symbols n', []) ->
+  node' n xs
+  where
+    node' (Symbols n) [] =
       fail "Likely problem: operators named with symbols need arguments"
-    (Identifier n', []) -> return $ Leaf n'
-    (Symbols n', xs') -> return $ Node n' xs'
-    (Identifier n', xs') -> return $ Node n' xs'
+    node' (Identifier n) [] = return $ Leaf n
+    node' (Symbols n) xs = return $ Node n xs
+    node' (Identifier n) xs = return $ Node n xs
 
 nodeName :: Stream s m String => ParsecT s u m OperatorName
 nodeName = maybeWrapped (Symbols <$> operator <|> Identifier <$> identifier)
