@@ -8,13 +8,13 @@ import qualified Data.List as List
 import Text.Parsec
 import Text.Parsec.Pos (updatePosString)
 
-data AST a
+data AST
   = Leaf
       { leafName :: String
       }
   | Node
       { name :: String,
-        args :: [AST a]
+        args :: [AST]
       }
   deriving (Eq)
 
@@ -22,25 +22,25 @@ data OperatorName
   = Symbols String
   | Identifier String
 
-instance Show a => Show (AST a) where
+instance Show AST where
   show (Leaf x) = x
   show (Node x ys) = "(" ++ x ++ " " ++ List.unwords (map show ys) ++ ")"
 
-parseAST :: String -> Either ParseError (AST a)
+parseAST :: String -> Either ParseError AST
 parseAST = parse ast "" . tokenize
 
-ast :: Stream s m String => ParsecT s u m (AST a)
+ast :: Stream s m String => ParsecT s u m AST
 ast = maybeWrapped (leaf <|> node)
 
-leafOrNode :: Stream s m String => ParsecT s u m (AST a)
+leafOrNode :: Stream s m String => ParsecT s u m AST
 leafOrNode =
   leaf <|> wrapped (maybeWrapped node)
     <?> "variable or subtree in parentheses"
 
-leaf :: Stream s m String => ParsecT s u m (AST a)
+leaf :: Stream s m String => ParsecT s u m AST
 leaf = Leaf <$> identifier
 
-node :: Stream s m String => ParsecT s u m (AST a)
+node :: Stream s m String => ParsecT s u m AST
 node = do
   n <- nodeName
   xs <- arguments
@@ -55,7 +55,7 @@ node = do
 nodeName :: Stream s m String => ParsecT s u m OperatorName
 nodeName = maybeWrapped (Symbols <$> operator <|> Identifier <$> identifier)
 
-arguments :: Stream s m String => ParsecT s u m [AST a]
+arguments :: Stream s m String => ParsecT s u m [AST]
 arguments = many leafOrNode
 
 -- For flexibility with nested parentheses

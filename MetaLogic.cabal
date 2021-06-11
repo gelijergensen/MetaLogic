@@ -51,7 +51,15 @@ extra-source-files:
 
 library
     -- Modules exported by the library.
-    exposed-modules:  Main, PropositionalLogic, Assignment, Parser
+    exposed-modules:  
+        Main
+      , Assignment
+      , Interpreter
+      , LogicFormula
+      -- , LogicSystem
+      , Parser
+      -- , PropositionalLogic
+      , PropositionalLogicEval
 
     -- Modules included in this library but not exported.
     other-modules:    OperatorSymbols
@@ -81,7 +89,7 @@ test-suite MetaLogic-test
     -- The entrypoint to the test suite.
     main-is:          Spec.hs
 
-    other-modules:    PropositionalLogicSpec, ParserSpec
+    other-modules:    PropositionalLogicEvalSpec, ParserSpec
 
     -- Test dependencies.
     build-depends:    

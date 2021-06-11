@@ -1,7 +1,7 @@
 module Main where
 
 import qualified OperatorSymbols as OS
-import qualified PropositionalLogic as Prop
+import qualified PropositionalLogicEval as Prop
 
 main :: IO ()
 main = putStrLn "Main does run"

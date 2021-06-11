@@ -61,7 +61,7 @@ instance Arbitrary ASTString where
             ((++ " ") . getOperatorName <$> arbitrary)
             (List.unwords <$> replicateM (min n 3) (formula' (n `div` 2)))
 
-instance Arbitrary (Parser.AST a) where
+instance Arbitrary Parser.AST where
   arbitrary = sized tree'
     where
       tree' 0 = leaf'
@@ -79,26 +79,26 @@ spec = do
   describe "Parser.parseAST" $ do
     it "handles unwrapped leaf" $
       do
-        show (fromRight undefined . Parser.parseAST $ "x" :: Parser.AST Int)
+        show (fromRight undefined . Parser.parseAST $ "x" :: Parser.AST)
         `shouldBe` "x"
     it "handles wrapped leaf" $
       do
         show
           ( fromRight undefined . Parser.parseAST $
               " ((( ( x ))  ) ) " ::
-              Parser.AST Int
+              Parser.AST
           )
         `shouldBe` "x"
     it "handles unwrapped node" $
       do
-        show (fromRight undefined . Parser.parseAST $ "+ X Y" :: Parser.AST Int)
+        show (fromRight undefined . Parser.parseAST $ "+ X Y" :: Parser.AST)
         `shouldBe` "(+ X Y)"
     it "handles wrapped leaf" $
       do
         show
           ( fromRight undefined . Parser.parseAST $
               " (( ( ( ( ( + X Y )) ))) )  " ::
-              Parser.AST Int
+              Parser.AST
           )
         `shouldBe` "(+ X Y)"
     it "errors when handling symbol operator with empty parameters" $
@@ -112,9 +112,9 @@ spec = do
         show
           ( fromRight undefined . Parser.parseAST $
               getASTString x ::
-              Parser.AST Int
+              Parser.AST
           )
           == getASTString x
     prop "parseAST . show == id" $
       \x ->
-        fromRight undefined (Parser.parseAST (show x)) == (x :: Parser.AST Int)
+        fromRight undefined (Parser.parseAST (show x)) == (x :: Parser.AST)
