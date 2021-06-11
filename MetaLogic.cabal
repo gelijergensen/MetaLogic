@@ -57,9 +57,9 @@ library
       , Assignment
       , Interpreter
       , LogicFormula
-      -- , LogicSystem
+      , LogicSystem
       , Parser
-      -- , PropositionalLogic
+      , PropositionalLogic
       , PropositionalLogicEval
 
     -- Modules included in this library but not exported.
