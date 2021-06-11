@@ -33,7 +33,9 @@ ast :: Stream s m String => ParsecT s u m (AST a)
 ast = maybeWrapped (leaf <|> node)
 
 leafOrNode :: Stream s m String => ParsecT s u m (AST a)
-leafOrNode = leaf <|> wrapped (maybeWrapped node)
+leafOrNode =
+  leaf <|> wrapped (maybeWrapped node)
+    <?> "variable or subtree in parentheses"
 
 leaf :: Stream s m String => ParsecT s u m (AST a)
 leaf = Leaf <$> identifier

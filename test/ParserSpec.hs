@@ -2,7 +2,7 @@ module ParserSpec where
 
 import qualified Assignment
 import Control.Monad (liftM2, replicateM)
-import Data.Either (fromRight)
+import Data.Either (fromRight, isLeft)
 import qualified Data.List as List
 import qualified Parser
 import Test.Hspec
@@ -77,6 +77,36 @@ instance Arbitrary (Parser.AST a) where
 spec :: Spec
 spec = do
   describe "Parser.parseAST" $ do
+    it "handles unwrapped leaf" $
+      do
+        show (fromRight undefined . Parser.parseAST $ "x" :: Parser.AST Int)
+        `shouldBe` "x"
+    it "handles wrapped leaf" $
+      do
+        show
+          ( fromRight undefined . Parser.parseAST $
+              " ((( ( x ))  ) ) " ::
+              Parser.AST Int
+          )
+        `shouldBe` "x"
+    it "handles unwrapped node" $
+      do
+        show (fromRight undefined . Parser.parseAST $ "+ X Y" :: Parser.AST Int)
+        `shouldBe` "(+ X Y)"
+    it "handles wrapped leaf" $
+      do
+        show
+          ( fromRight undefined . Parser.parseAST $
+              " (( ( ( ( ( + X Y )) ))) )  " ::
+              Parser.AST Int
+          )
+        `shouldBe` "(+ X Y)"
+    it "errors when handling symbol operator with empty parameters" $
+      do isLeft $ Parser.parseAST "+"
+    it "errors when passed invalid input" $
+      do isLeft $ Parser.parseAST "(+ X 1)"
+    it "errors when node in subtree is not wrapped in parentheses" $
+      do isLeft $ Parser.parseAST "(+ - Y X)"
     prop "show . parseAST == id (for our inputs)" $
       \x ->
         show
@@ -85,7 +115,6 @@ spec = do
               Parser.AST Int
           )
           == getASTString x
-
     prop "parseAST . show == id" $
       \x ->
         fromRight undefined (Parser.parseAST (show x)) == (x :: Parser.AST Int)
