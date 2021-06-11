@@ -51,7 +51,7 @@ extra-source-files:
 
 library
     -- Modules exported by the library.
-    exposed-modules:  Main, PropositionalLogic, Assignment
+    exposed-modules:  Main, PropositionalLogic, Assignment, Parser
 
     -- Modules included in this library but not exported.
     other-modules:    OperatorSymbols
@@ -60,7 +60,7 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.14.1.0, containers, bifunctors
+    build-depends:    base ^>=4.14.1.0, containers, parsec
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -81,7 +81,7 @@ test-suite MetaLogic-test
     -- The entrypoint to the test suite.
     main-is:          Spec.hs
 
-    other-modules:    PropositionalLogicSpec
+    other-modules:    PropositionalLogicSpec, ParserSpec
 
     -- Test dependencies.
     build-depends:    
