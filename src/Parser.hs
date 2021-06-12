@@ -2,19 +2,20 @@
 
 module Parser where
 
+import qualified AbstractSyntaxTree as AST
 import Control.Monad (liftM2)
 import qualified Data.Char as Char
 import qualified Data.List as List
 import Text.Parsec
 import Text.Parsec.Pos (updatePosString)
 
-data AST a
+data ParseTree
   = Leaf
       { leafName :: String
       }
   | Node
       { name :: String,
-        args :: [AST a]
+        args :: [ParseTree]
       }
   deriving (Eq)
 
@@ -22,25 +23,31 @@ data OperatorName
   = Symbols String
   | Identifier String
 
-instance Show a => Show (AST a) where
+instance Show ParseTree where
   show (Leaf x) = x
   show (Node x ys) = "(" ++ x ++ " " ++ List.unwords (map show ys) ++ ")"
 
-parseAST :: String -> Either ParseError (AST a)
-parseAST = parse ast "" . tokenize
+parseAST :: String -> Either ParseError (AST.AST String)
+parseAST str = toAST <$> parseTree str
+  where
+    toAST (Leaf n) = AST.ast n []
+    toAST (Node n args) = AST.ast n $ map toAST args
 
-ast :: Stream s m String => ParsecT s u m (AST a)
-ast = maybeWrapped (leaf <|> node)
+parseTree :: String -> Either ParseError ParseTree
+parseTree = parse tree "" . tokenize
 
-leafOrNode :: Stream s m String => ParsecT s u m (AST a)
+tree :: Stream s m String => ParsecT s u m ParseTree
+tree = maybeWrapped (leaf <|> node)
+
+leafOrNode :: Stream s m String => ParsecT s u m ParseTree
 leafOrNode =
   leaf <|> wrapped (maybeWrapped node)
     <?> "variable or subtree in parentheses"
 
-leaf :: Stream s m String => ParsecT s u m (AST a)
+leaf :: Stream s m String => ParsecT s u m ParseTree
 leaf = Leaf <$> identifier
 
-node :: Stream s m String => ParsecT s u m (AST a)
+node :: Stream s m String => ParsecT s u m ParseTree
 node = do
   n <- nodeName
   xs <- arguments
@@ -55,7 +62,7 @@ node = do
 nodeName :: Stream s m String => ParsecT s u m OperatorName
 nodeName = maybeWrapped (Symbols <$> operator <|> Identifier <$> identifier)
 
-arguments :: Stream s m String => ParsecT s u m [AST a]
+arguments :: Stream s m String => ParsecT s u m [ParseTree]
 arguments = many leafOrNode
 
 -- For flexibility with nested parentheses

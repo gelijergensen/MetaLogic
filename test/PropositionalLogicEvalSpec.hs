@@ -1,11 +1,11 @@
-module PropositionalLogicSpec where
+module PropositionalLogicEvalSpec where
 
 import qualified Assignment
 import Control.Monad (liftM2)
 import qualified Data.Char as Char
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified PropositionalLogic as Prop
+import qualified PropositionalLogicEval as Prop
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck

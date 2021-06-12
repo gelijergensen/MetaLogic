@@ -61,7 +61,7 @@ instance Arbitrary ASTString where
             ((++ " ") . getOperatorName <$> arbitrary)
             (List.unwords <$> replicateM (min n 3) (formula' (n `div` 2)))
 
-instance Arbitrary (Parser.AST a) where
+instance Arbitrary Parser.ParseTree where
   arbitrary = sized tree'
     where
       tree' 0 = leaf'
@@ -76,45 +76,48 @@ instance Arbitrary (Parser.AST a) where
 
 spec :: Spec
 spec = do
-  describe "Parser.parseAST" $ do
+  describe "Parser.parseTree" $ do
     it "handles unwrapped leaf" $
       do
-        show (fromRight undefined . Parser.parseAST $ "x" :: Parser.AST Int)
+        show (fromRight undefined . Parser.parseTree $ "x" :: Parser.ParseTree)
         `shouldBe` "x"
     it "handles wrapped leaf" $
       do
         show
-          ( fromRight undefined . Parser.parseAST $
+          ( fromRight undefined . Parser.parseTree $
               " ((( ( x ))  ) ) " ::
-              Parser.AST Int
+              Parser.ParseTree
           )
         `shouldBe` "x"
     it "handles unwrapped node" $
       do
-        show (fromRight undefined . Parser.parseAST $ "+ X Y" :: Parser.AST Int)
+        show
+          ( fromRight undefined . Parser.parseTree $ "+ X Y" :: Parser.ParseTree
+          )
         `shouldBe` "(+ X Y)"
     it "handles wrapped leaf" $
       do
         show
-          ( fromRight undefined . Parser.parseAST $
+          ( fromRight undefined . Parser.parseTree $
               " (( ( ( ( ( + X Y )) ))) )  " ::
-              Parser.AST Int
+              Parser.ParseTree
           )
         `shouldBe` "(+ X Y)"
     it "errors when handling symbol operator with empty parameters" $
-      do isLeft $ Parser.parseAST "+"
+      do isLeft $ Parser.parseTree "+"
     it "errors when passed invalid input" $
-      do isLeft $ Parser.parseAST "(+ X 1)"
+      do isLeft $ Parser.parseTree "(+ X 1)"
     it "errors when node in subtree is not wrapped in parentheses" $
-      do isLeft $ Parser.parseAST "(+ - Y X)"
-    prop "show . parseAST == id (for our inputs)" $
+      do isLeft $ Parser.parseTree "(+ - Y X)"
+    prop "show . parseTree == id (for our inputs)" $
       \x ->
         show
-          ( fromRight undefined . Parser.parseAST $
+          ( fromRight undefined . Parser.parseTree $
               getASTString x ::
-              Parser.AST Int
+              Parser.ParseTree
           )
           == getASTString x
-    prop "parseAST . show == id" $
+    prop "parseTree . show == id" $
       \x ->
-        fromRight undefined (Parser.parseAST (show x)) == (x :: Parser.AST Int)
+        fromRight undefined (Parser.parseTree (show x))
+          == (x :: Parser.ParseTree)

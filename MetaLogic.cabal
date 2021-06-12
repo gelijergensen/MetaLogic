@@ -14,7 +14,7 @@ name:               MetaLogic
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:            0.1.0.0
+version:            0.1.1.0
 
 -- A short (one-line) description of the package.
 synopsis:
@@ -51,13 +51,24 @@ extra-source-files:
 
 library
     -- Modules exported by the library.
-    exposed-modules:  Main, PropositionalLogic, Assignment, Parser
+    exposed-modules:  
+        Main
+      , AbstractSyntaxTree
+      , Assignment
+      , Interpreter
+      , LogicSystem
+      , Parser
+      , PropositionalLogic
+      , PropositionalLogicEval
 
     -- Modules included in this library but not exported.
-    other-modules:    OperatorSymbols
+    -- other-modules:    
 
     -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
+    other-extensions: 
+        FlexibleContexts
+      , MultiParamTypeClasses
+      , TypeFamilies
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.14.1.0, containers, parsec
@@ -81,7 +92,7 @@ test-suite MetaLogic-test
     -- The entrypoint to the test suite.
     main-is:          Spec.hs
 
-    other-modules:    PropositionalLogicSpec, ParserSpec
+    other-modules:    PropositionalLogicEvalSpec, ParserSpec
 
     -- Test dependencies.
     build-depends:    
