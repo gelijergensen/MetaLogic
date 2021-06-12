@@ -4,7 +4,6 @@ import qualified Assignment
 import Control.Applicative (liftA2)
 import qualified Data.Bifunctor as Bifunc
 import qualified Data.Set as Set
-import qualified OperatorSymbols as OS
 
 data PropFormula a
   = Truth

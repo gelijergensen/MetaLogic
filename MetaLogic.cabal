@@ -55,15 +55,14 @@ library
         Main
       , AbstractSyntaxTree
       , Assignment
-      -- , Interpreter
-      -- , LogicFormula
+      , Interpreter
       , LogicSystem
       , Parser
       , PropositionalLogic
       , PropositionalLogicEval
 
     -- Modules included in this library but not exported.
-    other-modules:    OperatorSymbols
+    -- other-modules:    
 
     -- LANGUAGE extensions used by modules in this package.
     other-extensions: 
