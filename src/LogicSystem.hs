@@ -3,24 +3,26 @@
 
 module LogicSystem where
 
-import qualified Data.Sequence as Seq
-
 class LogicSystem t where
-  data Operator t :: *
+  data Operator t :: * -> *
   data Formula t :: * -> *
-  arity :: Operator t -> Arity
+  data Rule t :: * -> *
+
+  -- arity :: Operator t a -> Arity
   identifier :: Formula t a -> a
-  subformulas :: Formula t a -> Seq.Seq (Formula t a)
-  inferenceRules :: t -> InferenceRules
 
-data Arity
-  = Constant
-  | Unary
-  | Binary
-  | Ternary
-  | Quaternary
-  | Quinary
-  | Variadic
-  deriving (Eq, Show)
+  -- subformulas :: Formula t a -> [Formula t a]
 
-data InferenceRules = InferenceRules
+  -- todo upgrade container
+  rewriteRules :: t -> [Rule t a]
+  rewrite :: Rule t a -> Formula t a -> Formula t a
+
+-- data Arity
+--   = Constant
+--   | Unary
+--   | Binary
+--   | Ternary
+--   | Quaternary
+--   | Quinary
+--   | Variadic
+--   deriving (Eq, Show)
