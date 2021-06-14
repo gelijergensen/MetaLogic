@@ -21,6 +21,7 @@ instance LS.LogicSystem PropositionalLogic where
   data Operator PropositionalLogic a
     = TRUE
     | FALSE
+    | VAR a
     | NOT (PropFormula a)
     | OR (PropFormula a) (PropFormula a)
     | AND (PropFormula a) (PropFormula a)
@@ -32,24 +33,19 @@ instance LS.LogicSystem PropositionalLogic where
     }
     deriving (Eq, Ord, Show)
   newtype Rule PropositionalLogic a = Rule
-    { rewrite ::
+    { runRule ::
         PropFormula a ->
         PropFormula a
     }
-
-  -- arity TRUE = LS.Constant
-  -- arity FALSE = LS.Constant
-  -- arity (NOT _) = LS.Unary
-  -- arity (OR _ _) = LS.Binary
-  -- arity (AND _ _) = LS.Binary
-  -- arity (IMPLIES _ _) = LS.Binary
   identifier = identifier
 
-  -- subformulas = subformulas
+  -- subformulas = undefined
   rewriteRules = undefined
-  rewrite = rewrite
+  runRule = runRule
 
 ---------- Rewrite Rules ----------
+
+_notTrue (NOT (PropFormula _ TRUE)) = PropFormula ""
 
 -- rewriteRules :: [LS.Rule PropositionalLogic a]
 -- rewriteRules = map Rule []
