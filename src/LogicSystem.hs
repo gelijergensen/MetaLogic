@@ -6,12 +6,10 @@ module LogicSystem where
 import qualified Data.Set as Set
 
 class LogicSystem t where
-  data Operator t :: * -> *
   data Formula t :: * -> *
   data Rule t :: * -> *
 
-  identifier :: Formula t a -> a
-
+  -- identifier :: Formula t a -> a
   -- subformulas :: Formula t a -> [Formula t a]
   rewriteRules :: t -> [Rule t a]
   runRule :: Rule t a -> Formula t a -> Formula t a

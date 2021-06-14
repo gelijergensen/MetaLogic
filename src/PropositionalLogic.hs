@@ -13,12 +13,10 @@ import Prelude hiding (and, not, or)
 
 data PropositionalLogic = PropositionalLogic deriving (Eq, Show)
 
-type PropOperator = LS.Operator PropositionalLogic
-
 type PropFormula = LS.Formula PropositionalLogic
 
 instance LS.LogicSystem PropositionalLogic where
-  data Operator PropositionalLogic a
+  data Formula PropositionalLogic a
     = TRUE
     | FALSE
     | VAR a
@@ -27,17 +25,11 @@ instance LS.LogicSystem PropositionalLogic where
     | AND (PropFormula a) (PropFormula a)
     | IMPLIES (PropFormula a) (PropFormula a)
     deriving (Eq, Ord, Show)
-  data Formula PropositionalLogic a = PropFormula
-    { identifier :: a,
-      formula :: PropOperator a
-    }
-    deriving (Eq, Ord, Show)
   newtype Rule PropositionalLogic a = Rule
     { runRule ::
         PropFormula a ->
         PropFormula a
     }
-  identifier = identifier
 
   -- subformulas = undefined
   rewriteRules = undefined
@@ -45,7 +37,7 @@ instance LS.LogicSystem PropositionalLogic where
 
 ---------- Rewrite Rules ----------
 
-_notTrue (NOT (PropFormula _ TRUE)) = PropFormula ""
+-- _notTrue (NOT (PropFormula _ TRUE)) = PropFormula ""
 
 -- rewriteRules :: [LS.Rule PropositionalLogic a]
 -- rewriteRules = map Rule []
@@ -68,13 +60,13 @@ newtype PropositionalLogicInterpreter a = PropositionalLogicInterpreter
   { operatorByID ::
       Map.Map
         a
-        ([PropFormula a] -> Either Interpreter.InterpretError (PropOperator a))
+        ([PropFormula a] -> Either Interpreter.InterpretError (PropFormula a))
   }
 
 instance Ord a => Interpreter.Interpreter (PropositionalLogicInterpreter a) a where
   type LogicSystem (PropositionalLogicInterpreter a) = PropositionalLogic
   operatorByID = operatorByID
-  formula = const PropFormula
+  variableFromID = const VAR
 
 defaultPropositionalLogicInterpreter :: PropositionalLogicInterpreter String
 defaultPropositionalLogicInterpreter =
@@ -90,7 +82,7 @@ defaultPropositionalLogicInterpreter =
 propositionalLogicInterpreterFromNames ::
   Ord a =>
   [ ( [PropFormula a] ->
-      Either Interpreter.InterpretError (PropOperator a),
+      Either Interpreter.InterpretError (PropFormula a),
       [a]
     )
   ] ->
@@ -100,20 +92,20 @@ propositionalLogicInterpreterFromNames =
     . Map.fromList
     . concatMap (\(op, ns) -> map (,op) ns)
 
-true :: [PropFormula a] -> Either Interpreter.InterpretError (PropOperator a)
+true :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
 true = Interpreter.makeConstant TRUE "PropositionalLogic.TRUE"
 
-false :: [PropFormula a] -> Either Interpreter.InterpretError (PropOperator a)
+false :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
 false = Interpreter.makeConstant FALSE "PropositionalLogic.FALSE"
 
-not :: [PropFormula a] -> Either Interpreter.InterpretError (PropOperator a)
+not :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
 not = Interpreter.makeUnary NOT "PropositionalLogic.NOT"
 
-or :: [PropFormula a] -> Either Interpreter.InterpretError (PropOperator a)
+or :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
 or = Interpreter.makeBinary OR "PropositionalLogic.OR"
 
-and :: [PropFormula a] -> Either Interpreter.InterpretError (PropOperator a)
+and :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
 and = Interpreter.makeBinary AND "PropositionalLogic.AND"
 
-implies :: [PropFormula a] -> Either Interpreter.InterpretError (PropOperator a)
+implies :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
 implies = Interpreter.makeBinary IMPLIES "PropositionalLogic.IMPLIES"

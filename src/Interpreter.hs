@@ -18,10 +18,10 @@ class (Ord a, LS.LogicSystem (LogicSystem i)) => Interpreter i a where
     Map.Map
       a
       ( [LS.Formula (LogicSystem i) a] ->
-        Either Interpreter.InterpretError (LS.Operator (LogicSystem i) a)
+        Either Interpreter.InterpretError (LS.Formula (LogicSystem i) a)
       )
-  formula ::
-    i -> a -> LS.Operator (LogicSystem i) a -> LS.Formula (LogicSystem i) a
+  variableFromID ::
+    i -> a -> LS.Formula (LogicSystem i) a
 
 newtype InterpretError = InterpretError String deriving (Show)
 
@@ -31,23 +31,23 @@ interpret ::
   AST.AST a ->
   Either InterpretError (LS.Formula (LogicSystem i) a)
 interpret i (AST.AST n children) = case Map.lookup n (operatorByID i) of
-  Nothing -> Left $ InterpretError $ "No operator for " ++ show n
-  (Just op) -> mapM (interpret i) children >>= op <&> formula i n
+  Nothing -> pure $ variableFromID i n
+  (Just op) -> mapM (interpret i) children >>= op
 
 makeConstant ::
-  LS.Operator t a ->
+  LS.Formula t a ->
   String ->
   [LS.Formula t a] ->
-  Either InterpretError (LS.Operator t a)
+  Either InterpretError (LS.Formula t a)
 makeConstant op _ [] = Right op
 makeConstant _ name _ =
   Left $ InterpretError $ name ++ " doesn't expect children"
 
 makeUnary ::
-  (LS.Formula t a -> LS.Operator t a) ->
+  (LS.Formula t a -> LS.Formula t a) ->
   String ->
   [LS.Formula t a] ->
-  Either InterpretError (LS.Operator t a)
+  Either InterpretError (LS.Formula t a)
 makeUnary _ name [] =
   Left $ InterpretError $ name ++ " expects 1 child; recieved none"
 makeUnary op _ [x] = Right $ op x
@@ -55,10 +55,10 @@ makeUnary _ name _ =
   Left $ InterpretError $ name ++ " expects 1 child; recieved multiple"
 
 makeBinary ::
-  (LS.Formula t a -> LS.Formula t a -> LS.Operator t a) ->
+  (LS.Formula t a -> LS.Formula t a -> LS.Formula t a) ->
   String ->
   [LS.Formula t a] ->
-  Either InterpretError (LS.Operator t a)
+  Either InterpretError (LS.Formula t a)
 makeBinary _ name [] =
   Left $ InterpretError $ name ++ " expects 2 children; recieved none"
 makeBinary _ name [_] =
