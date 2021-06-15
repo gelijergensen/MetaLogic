@@ -59,7 +59,6 @@ library
       , LogicSystem
       , Parser
       , PropositionalLogic
-      , PropositionalLogicEval
 
     -- Modules included in this library but not exported.
     -- other-modules:    
@@ -95,7 +94,6 @@ test-suite MetaLogic-test
     other-modules:    
         LogicSystemSpec
       , ParserSpec
-      , PropositionalLogicEvalSpec
       , PropositionalLogicSpec
 
     -- Test dependencies.
