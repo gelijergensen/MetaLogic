@@ -1,8 +1,5 @@
 module LogicSystemSpec where
 
-import qualified Assignment
-import Control.Monad (liftM2, replicateM)
-import Data.Either (fromRight, isLeft)
 import qualified Data.Set as Set
 import qualified LogicSystem as LS
 import Test.Hspec

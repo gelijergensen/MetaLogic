@@ -1,6 +1,5 @@
 module ParserSpec where
 
-import qualified Assignment
 import Control.Monad (liftM2, replicateM)
 import Data.Either (fromRight, isLeft)
 import qualified Data.List as List

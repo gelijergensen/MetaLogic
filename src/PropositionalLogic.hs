@@ -32,28 +32,172 @@ instance LS.LogicSystem PropositionalLogic where
     }
 
   -- subformulas = undefined
-  rewriteRules = undefined
+  rewriteRules =
+    const . map Rule $
+      [ _notTrue,
+        _notFalse,
+        _doubleNegation,
+        _orCommutative,
+        _orAssociativeL,
+        _orAssociativeR,
+        _orTrue,
+        _orFalse,
+        _orSame,
+        _orDeMorgan,
+        _orDistributive1,
+        _orDistributive2,
+        _orDistributive3,
+        _orDistributive4,
+        _lawOfExcludedMiddle,
+        _andCommutative,
+        _andAssociativeL,
+        _andAssociativeR,
+        _andTrue,
+        _andFalse,
+        _andSame,
+        _andDeMorgan,
+        _andDistributive1,
+        _andDistributive2,
+        _andDistributive3,
+        _andDistributive4,
+        _contradiction,
+        _materialImplication
+      ]
   runRule = runRule
 
 ---------- Rewrite Rules ----------
 
--- _notTrue (NOT (PropFormula _ TRUE)) = PropFormula ""
+_notTrue :: PropFormula a -> PropFormula a
+_notTrue (NOT TRUE) = FALSE
+_notTrue x = x
 
--- rewriteRules :: [LS.Rule PropositionalLogic a]
--- rewriteRules = map Rule []
+_notFalse :: PropFormula a -> PropFormula a
+_notFalse (NOT FALSE) = TRUE
+_notFalse x = x
 
--- _notTrue x = undefined `onOperator` NOT
+_doubleNegation :: PropFormula a -> PropFormula a
+_doubleNegation (NOT (NOT x)) = x
+_doubleNegation x = x
 
--- _rewriteImplies x = case operator x of
---   IMPLIES -> undefined
---   _ -> x
+_orCommutative :: PropFormula a -> PropFormula a
+_orCommutative (OR x y) = OR y x
+_orCommutative x = x
 
--- onOperator ::
---   (PropFormula a -> PropFormula a) ->
---   PropOperator ->
---   PropFormula a ->
---   PropFormula a
--- onOperator rw op x = if operator x == op then rw x else x
+_orAssociativeL :: PropFormula a -> PropFormula a
+_orAssociativeL (OR (OR x y) z) = OR x (OR y z)
+_orAssociativeL x = x
+
+_orAssociativeR :: PropFormula a -> PropFormula a
+_orAssociativeR (OR x (OR y z)) = OR (OR x y) z
+_orAssociativeR x = x
+
+_orTrue :: PropFormula a -> PropFormula a
+_orTrue (OR TRUE _) = TRUE
+_orTrue (OR _ TRUE) = TRUE
+_orTrue x = x
+
+_orFalse :: PropFormula a -> PropFormula a
+_orFalse (OR FALSE x) = x
+_orFalse (OR x FALSE) = x
+_orFalse x = x
+
+_orSame :: Eq a => PropFormula a -> PropFormula a
+_orSame (OR x y)
+  | x == y = x
+_orSame x = x
+
+_orDeMorgan :: PropFormula a -> PropFormula a
+_orDeMorgan (NOT (OR x y)) = AND (NOT x) (NOT y)
+_orDeMorgan x = x
+
+_orDistributive1 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive1 (OR (AND w x) (AND y z))
+  | w == y = AND w (OR x z)
+_orDistributive1 x = x
+
+_orDistributive2 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive2 (OR (AND w x) (AND y z))
+  | w == z = AND w (OR x y)
+_orDistributive2 x = x
+
+_orDistributive3 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive3 (OR (AND w x) (AND y z))
+  | x == y = AND x (OR w z)
+_orDistributive3 x = x
+
+_orDistributive4 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive4 (OR (AND w x) (AND y z))
+  | x == z = AND x (OR w y)
+_orDistributive4 x = x
+
+_lawOfExcludedMiddle :: Eq a => PropFormula a -> PropFormula a
+_lawOfExcludedMiddle (OR (NOT x) y)
+  | x == y = TRUE
+_lawOfExcludedMiddle (OR x (NOT y))
+  | x == y = TRUE
+_lawOfExcludedMiddle x = x
+
+_andCommutative :: PropFormula a -> PropFormula a
+_andCommutative (AND x y) = AND y x
+_andCommutative x = x
+
+_andAssociativeL :: PropFormula a -> PropFormula a
+_andAssociativeL (AND (AND x y) z) = AND x (AND y z)
+_andAssociativeL x = x
+
+_andAssociativeR :: PropFormula a -> PropFormula a
+_andAssociativeR (AND x (AND y z)) = AND (AND x y) z
+_andAssociativeR x = x
+
+_andTrue :: PropFormula a -> PropFormula a
+_andTrue (AND TRUE x) = x
+_andTrue (AND x TRUE) = x
+_andTrue x = x
+
+_andFalse :: PropFormula a -> PropFormula a
+_andFalse (AND FALSE _) = FALSE
+_andFalse (AND _ FALSE) = FALSE
+_andFalse x = x
+
+_andSame :: Eq a => PropFormula a -> PropFormula a
+_andSame (AND x y)
+  | x == y = x
+_andSame x = x
+
+_andDeMorgan :: PropFormula a -> PropFormula a
+_andDeMorgan (NOT (AND x y)) = OR (NOT x) (NOT y)
+_andDeMorgan x = x
+
+_andDistributive1 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive1 (AND (OR w x) (OR y z))
+  | w == y = OR w (AND x z)
+_andDistributive1 x = x
+
+_andDistributive2 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive2 (AND (OR w x) (OR y z))
+  | w == z = OR w (AND x y)
+_andDistributive2 x = x
+
+_andDistributive3 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive3 (AND (OR w x) (OR y z))
+  | x == y = OR x (AND w z)
+_andDistributive3 x = x
+
+_andDistributive4 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive4 (AND (OR w x) (OR y z))
+  | x == z = OR x (AND w y)
+_andDistributive4 x = x
+
+_contradiction :: Eq a => PropFormula a -> PropFormula a
+_contradiction (AND (NOT x) y)
+  | x == y = FALSE
+_contradiction (AND x (NOT y))
+  | x == y = FALSE
+_contradiction x = x
+
+_materialImplication :: PropFormula a -> PropFormula a
+_materialImplication (IMPLIES x y) = OR (NOT x) y
+_materialImplication x = x
 
 ---------- Interpreters ----------
 newtype PropositionalLogicInterpreter a = PropositionalLogicInterpreter

@@ -92,7 +92,11 @@ test-suite MetaLogic-test
     -- The entrypoint to the test suite.
     main-is:          Spec.hs
 
-    other-modules:    PropositionalLogicEvalSpec, ParserSpec, LogicSystemSpec
+    other-modules:    
+        LogicSystemSpec
+      , ParserSpec
+      , PropositionalLogicEvalSpec
+      , PropositionalLogicSpec
 
     -- Test dependencies.
     build-depends:    

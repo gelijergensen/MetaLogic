@@ -11,7 +11,7 @@ class LogicSystem t where
 
   -- identifier :: Formula t a -> a
   -- subformulas :: Formula t a -> [Formula t a]
-  rewriteRules :: t -> [Rule t a]
+  rewriteRules :: Eq a => t -> [Rule t a]
   runRule :: Rule t a -> Formula t a -> Formula t a
 
 data SearchEnv a = SearchEnv
@@ -35,7 +35,7 @@ instance Foldable Frontier where
   foldMap f (Frontier xs) = foldMap f xs
 
 rewrite ::
-  (Ord (Formula t a), LogicSystem t) =>
+  (Eq a, Ord (Formula t a), LogicSystem t) =>
   t ->
   Formula t a ->
   Set.Set (Formula t a)
