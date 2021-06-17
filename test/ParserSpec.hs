@@ -45,6 +45,7 @@ instance Arbitrary OperatorName where
         | n > 2 = name' 2
         | n == 0 = (: []) . getSymbol <$> arbitrary
         | n > 0 = liftM2 (:) (getSymbol <$> arbitrary) (name' (n - 1))
+        | otherwise = error "negative size"
 
 instance Arbitrary ASTString where
   arbitrary = ASTString <$> sized formula'
@@ -52,6 +53,7 @@ instance Arbitrary ASTString where
       formula' 0 = leaf'
       formula' n
         | n > 0 = oneof [leaf', node' n]
+        | otherwise = error "negative size"
       leaf' = getIdentifier <$> arbitrary
       node' n =
         (\x -> "(" ++ x ++ ")")
@@ -66,7 +68,8 @@ instance Arbitrary Parser.ParseTree where
       tree' 0 = leaf'
       tree' n
         | n > 0 = oneof [leaf', node' n]
-      leaf' = Parser.Leaf . getIdentifier <$> arbitrary
+        | otherwise = error "negative size"
+      leaf' = (`Parser.Node` []) . getIdentifier <$> arbitrary
       node' n =
         liftM2
           Parser.Node
@@ -102,12 +105,44 @@ spec = do
               Parser.ParseTree
           )
         `shouldBe` "(+ X Y)"
+    it "handles named operators" $
+      do
+        show
+          ( fromRight undefined . Parser.parseTree $ "O X Y" :: Parser.ParseTree
+          )
+        `shouldBe` "(O X Y)"
+    it "handles wrapped operator identifiers" $
+      do
+        show
+          ( fromRight undefined
+              . Parser.parseTree
+              $ "(+) X Y" ::
+              Parser.ParseTree
+          )
+        `shouldBe` "(+ X Y)"
+    it "handles wrapped named operators" $
+      do
+        show
+          ( fromRight undefined
+              . Parser.parseTree
+              $ "(O) X Y" ::
+              Parser.ParseTree
+          )
+        `shouldBe` "(O X Y)"
     it "errors when handling symbol operator with empty parameters" $
       do isLeft $ Parser.parseTree "+"
     it "errors when passed invalid input" $
       do isLeft $ Parser.parseTree "(+ X 1)"
-    it "errors when node in subtree is not wrapped in parentheses" $
+    it "errors when subtree is not wrapped in parentheses (first arg)" $
       do isLeft $ Parser.parseTree "(+ - Y X)"
+    it "errors when subtree is not wrapped in parentheses (second arg)" $
+      do isLeft $ Parser.parseTree "(+ Y - X)"
+    it
+      "errors when subtree is not wrapped in parentheses (first arg, unwrapped)"
+      $ do isLeft $ Parser.parseTree "+ - Y X"
+    it
+      "errors when subtree is not wrapped in parentheses (second arg, unwrapped)"
+      $ do isLeft $ Parser.parseTree "+ Y - X"
     prop "show . parseTree == id (for our inputs)" $
       \x ->
         show

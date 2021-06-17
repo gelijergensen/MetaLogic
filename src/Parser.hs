@@ -9,14 +9,10 @@ import qualified Data.List as List
 import Text.Parsec
 import Text.Parsec.Pos (updatePosString)
 
-data ParseTree
-  = Leaf
-      { leafName :: String
-      }
-  | Node
-      { name :: String,
-        args :: [ParseTree]
-      }
+data ParseTree = Node
+  { name :: String,
+    args :: [ParseTree]
+  }
   deriving (Eq)
 
 data OperatorName
@@ -24,28 +20,29 @@ data OperatorName
   | Identifier String
 
 instance Show ParseTree where
-  show (Leaf x) = x
+  show (Node x []) = x
   show (Node x ys) = "(" ++ x ++ " " ++ List.unwords (map show ys) ++ ")"
 
 parseAST :: String -> Either ParseError (AST.AST String)
 parseAST str = toAST <$> parseTree str
   where
-    toAST (Leaf n) = AST.ast n []
     toAST (Node n args) = AST.ast n $ map toAST args
 
 parseTree :: String -> Either ParseError ParseTree
-parseTree = parse tree "" . tokenize
+parseTree = parse start "" . tokenize
+
+start :: Stream s m String => ParsecT s u m ParseTree
+start = tree <* eof
 
 tree :: Stream s m String => ParsecT s u m ParseTree
-tree = maybeWrapped (leaf <|> node)
+tree = maybeWrapped node
 
-leafOrNode :: Stream s m String => ParsecT s u m ParseTree
-leafOrNode =
-  leaf <|> wrapped (maybeWrapped node)
-    <?> "variable or subtree in parentheses"
+leafOrTree :: Stream s m String => ParsecT s u m ParseTree
+leafOrTree =
+  try leaf <|> wrapped tree <?> "variable or subtree in parentheses"
 
 leaf :: Stream s m String => ParsecT s u m ParseTree
-leaf = Leaf <$> identifier
+leaf = (`Node` []) <$> identifier
 
 node :: Stream s m String => ParsecT s u m ParseTree
 node = do
@@ -55,7 +52,6 @@ node = do
   where
     node' (Symbols n) [] =
       fail "Likely problem: operators named with symbols need arguments"
-    node' (Identifier n) [] = return $ Leaf n
     node' (Symbols n) xs = return $ Node n xs
     node' (Identifier n) xs = return $ Node n xs
 
@@ -63,7 +59,7 @@ nodeName :: Stream s m String => ParsecT s u m OperatorName
 nodeName = maybeWrapped (Symbols <$> operator <|> Identifier <$> identifier)
 
 arguments :: Stream s m String => ParsecT s u m [ParseTree]
-arguments = many leafOrNode
+arguments = many leafOrTree
 
 -- For flexibility with nested parentheses
 maybeWrapped :: Stream s m String => ParsecT s u m t -> ParsecT s u m t
