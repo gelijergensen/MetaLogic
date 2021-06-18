@@ -6,6 +6,7 @@ import qualified AbstractSyntaxTree as AST
 import Control.Monad (liftM2)
 import qualified Data.Char as Char
 import qualified Data.List as List
+import qualified ErrorHandling as EH
 import Text.Parsec
 import Text.Parsec.Pos (updatePosString)
 
@@ -19,8 +20,10 @@ instance Show ParseTree where
   show (Node x []) = x
   show (Node x ys) = "(" ++ x ++ " " ++ List.unwords (map show ys) ++ ")"
 
-parseAST :: String -> Either ParseError (AST.AST String)
-parseAST str = toAST <$> parseTree str
+parseAST :: String -> Either EH.Error (AST.AST String)
+parseAST str = case parseTree str of
+  Left err -> Left $ EH.parseError err
+  Right result -> Right $ toAST result
   where
     toAST (Node n args) = AST.ast n $ map toAST args
 

@@ -54,6 +54,7 @@ library
     exposed-modules:  
         Main
       , AbstractSyntaxTree
+      , ErrorHandling
       , Interpreter
       , LogicSystem
       , Parser

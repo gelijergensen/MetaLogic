@@ -7,6 +7,7 @@
 module PeanoArithmetic where
 
 import qualified Data.Map as Map
+import qualified ErrorHandling as EH
 import qualified Interpreter
 import qualified LogicSystem as LS
 import qualified RApplicative as RApp
@@ -130,10 +131,10 @@ newtype PeanoArithmeticInterpreter a = PeanoArithmeticInterpreter
   { operatorByID ::
       Map.Map
         a
-        ([PeanoFormula a] -> Either Interpreter.InterpretError (PeanoFormula a))
+        ([PeanoFormula a] -> Either EH.Error (PeanoFormula a))
   }
 
-instance Ord a => Interpreter.Interpreter (PeanoArithmeticInterpreter a) a where
+instance Ord a => Interpreter.Interpreter (PeanoArithmeticInterpreter a) a a where
   type LogicSystem (PeanoArithmeticInterpreter a) = PeanoArithmetic
   operatorByID = operatorByID
   variableFromID = const VAR
@@ -150,7 +151,7 @@ defaultPeanoArithmeticInterpreter =
 peanoArithmeticInterpreterFromNames ::
   Ord a =>
   [ ( [PeanoFormula a] ->
-      Either Interpreter.InterpretError (PeanoFormula a),
+      Either EH.Error (PeanoFormula a),
       [a]
     )
   ] ->
@@ -160,14 +161,14 @@ peanoArithmeticInterpreterFromNames =
     . Map.fromList
     . concatMap (\(op, ns) -> map (,op) ns)
 
-zero :: [PeanoFormula a] -> Either Interpreter.InterpretError (PeanoFormula a)
+zero :: [PeanoFormula a] -> Either EH.Error (PeanoFormula a)
 zero = Interpreter.makeConstant ZERO "PeanoArithmetic.ZERO"
 
-succ :: [PeanoFormula a] -> Either Interpreter.InterpretError (PeanoFormula a)
+succ :: [PeanoFormula a] -> Either EH.Error (PeanoFormula a)
 succ = Interpreter.makeUnary S "PeanoArithmetic.S"
 
-plus :: [PeanoFormula a] -> Either Interpreter.InterpretError (PeanoFormula a)
+plus :: [PeanoFormula a] -> Either EH.Error (PeanoFormula a)
 plus = Interpreter.makeBinary PLUS "PeanoArithmetic.PLUS"
 
-times :: [PeanoFormula a] -> Either Interpreter.InterpretError (PeanoFormula a)
+times :: [PeanoFormula a] -> Either EH.Error (PeanoFormula a)
 times = Interpreter.makeBinary TIMES "PeanoArithmetic.TIMES"
