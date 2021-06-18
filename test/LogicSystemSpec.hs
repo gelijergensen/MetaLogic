@@ -28,7 +28,7 @@ instance LS.LogicSystem TestLogic where
         TestFormula a ->
         TestFormula a
     }
-  type RuleConstraint TestLogic = Eq
+  type RuleConstraint TestLogic a = Eq a
 
   rewriteRules = const . map Rule $ [_andTrue, _andFalse, _andSame]
   mapFormula f term@(AND x y) =

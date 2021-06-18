@@ -59,6 +59,7 @@ library
       , LogicSystem
       , Parser
       , PeanoArithmetic
+      , PolynomialRings
       , PropositionalLogic
       , RApplicative
 

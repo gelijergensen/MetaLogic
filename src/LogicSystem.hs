@@ -12,7 +12,8 @@ import qualified RApplicative as RApp
 class LogicSystem t where
   data Formula t :: * -> *
   data Rule t :: * -> *
-  type RuleConstraint t :: * -> Constraint
+  type RuleConstraint t a :: Constraint
+  type RuleConstraint t a = ()
 
   mapFormula ::
     Ord (Formula t a) =>
