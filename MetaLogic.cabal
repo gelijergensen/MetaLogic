@@ -57,6 +57,7 @@ library
       , Interpreter
       , LogicSystem
       , Parser
+      , PeanoArithmetic
       , PropositionalLogic
       , RApplicative
 
