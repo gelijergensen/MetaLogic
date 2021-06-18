@@ -6,6 +6,7 @@ import qualified AbstractSyntaxTree as AST
 import Control.Monad (liftM2)
 import qualified Data.Char as Char
 import qualified Data.List as List
+import qualified ErrorHandling as EH
 import Text.Parsec
 import Text.Parsec.Pos (updatePosString)
 
@@ -15,16 +16,14 @@ data ParseTree = Node
   }
   deriving (Eq)
 
-data OperatorName
-  = Symbols String
-  | Identifier String
-
 instance Show ParseTree where
   show (Node x []) = x
   show (Node x ys) = "(" ++ x ++ " " ++ List.unwords (map show ys) ++ ")"
 
-parseAST :: String -> Either ParseError (AST.AST String)
-parseAST str = toAST <$> parseTree str
+parseAST :: String -> Either EH.Error (AST.AST String)
+parseAST str = case parseTree str of
+  Left err -> Left $ EH.parseError err
+  Right result -> Right $ toAST result
   where
     toAST (Node n args) = AST.ast n $ map toAST args
 
@@ -42,21 +41,13 @@ leafOrTree =
   try leaf <|> wrapped tree <?> "variable or subtree in parentheses"
 
 leaf :: Stream s m String => ParsecT s u m ParseTree
-leaf = (`Node` []) <$> identifier
+leaf = (`Node` []) <$> anyNonParenthesis
 
 node :: Stream s m String => ParsecT s u m ParseTree
-node = do
-  n <- nodeName
-  xs <- arguments
-  node' n xs
-  where
-    node' (Symbols n) [] =
-      fail "Likely problem: operators named with symbols need arguments"
-    node' (Symbols n) xs = return $ Node n xs
-    node' (Identifier n) xs = return $ Node n xs
+node = liftM2 Node nodeName arguments
 
-nodeName :: Stream s m String => ParsecT s u m OperatorName
-nodeName = maybeWrapped (Symbols <$> operator <|> Identifier <$> identifier)
+nodeName :: Stream s m String => ParsecT s u m String
+nodeName = maybeWrapped anyNonParenthesis
 
 arguments :: Stream s m String => ParsecT s u m [ParseTree]
 arguments = many leafOrTree
@@ -68,16 +59,8 @@ maybeWrapped p = try p <|> wrapped (maybeWrapped p)
 wrapped :: Stream s m String => ParsecT s u m t -> ParsecT s u m t
 wrapped = between (word "(") (word ")")
 
--- Custom parsers which process individual strings at the char level
-identifier :: Stream s m String => ParsecT s u m String
-identifier = satisfyWord f
-  where
-    f x = Char.isLetter (head x) && all Char.isAlphaNum (tail x)
-
-operator :: Stream s m String => ParsecT s u m String
-operator = satisfyWord f
-  where
-    f = all (`elem` ".,:;'/<>?~!@#$%^&*-+=|\\")
+anyNonParenthesis :: Stream s m String => ParsecT s u m String
+anyNonParenthesis = satisfyWord (`notElem` ["(", ")"])
 
 word :: Stream s m String => String -> ParsecT s u m String
 word w = satisfyWord (== w) <?> w

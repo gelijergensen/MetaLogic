@@ -8,43 +8,31 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 
-newtype Alpha = Alpha {getAlpha :: Char}
+newtype SingleChar = SingleChar {getSingleChar :: Char}
 
-newtype AlphaNum = AlphaNum {getAlphaNum :: Char}
-
-newtype Identifier = Identifier {getIdentifier :: String}
-
-newtype Symbol = Symbol {getSymbol :: Char}
-
-newtype OperatorName = OperatorName {getOperatorName :: String}
+newtype AnyNonParenthesis = AnyNonParenthesis {getAnyNonParenthesis :: String}
+  deriving (Eq, Show)
 
 newtype ASTString = ASTString {getASTString :: String} deriving (Eq, Show)
 
-instance Arbitrary Alpha where
-  arbitrary = oneof $ map (pure . Alpha) (['A' .. 'Z'] ++ ['a' .. 'z'])
-
-instance Arbitrary AlphaNum where
+instance Arbitrary SingleChar where
   arbitrary =
-    oneof $ map (pure . AlphaNum) (['A' .. 'Z'] ++ ['a' .. 'z'] ++ ['0' .. '9'])
+    oneof $
+      map
+        (pure . SingleChar)
+        ( ['A' .. 'J']
+            ++ ['a' .. 'j']
+            ++ ['0' .. '9']
+            ++ ".,:;'/<>?~!@#$%^&*-_+|\\"
+        )
 
-instance Arbitrary Symbol where
-  arbitrary = oneof $ map (pure . Symbol) ".,:;'/<>?~!@#$%^&*-+=|\\"
-
-instance Arbitrary Identifier where
-  arbitrary =
-    Identifier
-      <$> liftM2
-        (:)
-        (getAlpha <$> arbitrary)
-        (oneof [pure [], (: []) . getAlphaNum <$> arbitrary])
-
-instance Arbitrary OperatorName where
-  arbitrary = OperatorName <$> sized name'
+instance Arbitrary AnyNonParenthesis where
+  arbitrary = AnyNonParenthesis <$> sized name'
     where
       name' n
-        | n > 2 = name' 2
-        | n == 0 = (: []) . getSymbol <$> arbitrary
-        | n > 0 = liftM2 (:) (getSymbol <$> arbitrary) (name' (n - 1))
+        | n > 5 = name' 5
+        | n == 0 = (: []) . getSingleChar <$> arbitrary
+        | n > 0 = liftM2 (:) (getSingleChar <$> arbitrary) (name' (n - 1))
         | otherwise = error "negative size"
 
 instance Arbitrary ASTString where
@@ -54,12 +42,12 @@ instance Arbitrary ASTString where
       formula' n
         | n > 0 = oneof [leaf', node' n]
         | otherwise = error "negative size"
-      leaf' = getIdentifier <$> arbitrary
+      leaf' = getAnyNonParenthesis <$> arbitrary
       node' n =
         (\x -> "(" ++ x ++ ")")
           <$> liftM2
             (++)
-            ((++ " ") . getOperatorName <$> arbitrary)
+            ((++ " ") . getAnyNonParenthesis <$> arbitrary)
             (List.unwords <$> replicateM (min n 3) (formula' (n `div` 2)))
 
 instance Arbitrary Parser.ParseTree where
@@ -69,11 +57,11 @@ instance Arbitrary Parser.ParseTree where
       tree' n
         | n > 0 = oneof [leaf', node' n]
         | otherwise = error "negative size"
-      leaf' = (`Parser.Node` []) . getIdentifier <$> arbitrary
+      leaf' = (`Parser.Node` []) . getAnyNonParenthesis <$> arbitrary
       node' n =
         liftM2
           Parser.Node
-          (getOperatorName <$> arbitrary)
+          (getAnyNonParenthesis <$> arbitrary)
           (replicateM (min n 3) (tree' (n `div` 2)))
 
 spec :: Spec
@@ -129,20 +117,22 @@ spec = do
               Parser.ParseTree
           )
         `shouldBe` "(O X Y)"
-    it "errors when handling symbol operator with empty parameters" $
-      do isLeft $ Parser.parseTree "+"
-    it "errors when passed invalid input" $
-      do isLeft $ Parser.parseTree "(+ X 1)"
-    it "errors when subtree is not wrapped in parentheses (first arg)" $
-      do isLeft $ Parser.parseTree "(+ - Y X)"
-    it "errors when subtree is not wrapped in parentheses (second arg)" $
-      do isLeft $ Parser.parseTree "(+ Y - X)"
-    it
-      "errors when subtree is not wrapped in parentheses (first arg, unwrapped)"
-      $ do isLeft $ Parser.parseTree "+ - Y X"
-    it
-      "errors when subtree is not wrapped in parentheses (second arg, unwrapped)"
-      $ do isLeft $ Parser.parseTree "+ Y - X"
+    it "handles symbol operator with empty parameters" $
+      do
+        show
+          (fromRight undefined . Parser.parseTree $ "+" :: Parser.ParseTree)
+        `shouldBe` "+"
+    it "handles leaves named by numbers" $
+      do
+        show
+          (fromRight undefined . Parser.parseTree $ "+ X 1" :: Parser.ParseTree)
+        `shouldBe` "(+ X 1)"
+    it "handles nodes named by numbers" $
+      do
+        show
+          (fromRight undefined . Parser.parseTree $ "1 X Y" :: Parser.ParseTree)
+        `shouldBe` "(1 X Y)"
+
     prop "show . parseTree == id (for our inputs)" $
       \x ->
         show

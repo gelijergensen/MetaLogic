@@ -10,3 +10,6 @@ data AST a = AST
 
 ast :: a -> [AST a] -> AST a
 ast = AST
+
+instance Functor AST where
+  fmap f (AST n as) = AST (f n) (fmap (fmap f) as)

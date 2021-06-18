@@ -8,6 +8,7 @@ module PropositionalLogic where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified ErrorHandling as EH
 import qualified Interpreter
 import qualified LogicSystem as LS
 import qualified RApplicative as RApp
@@ -237,10 +238,10 @@ newtype PropositionalLogicInterpreter a = PropositionalLogicInterpreter
   { operatorByID ::
       Map.Map
         a
-        ([PropFormula a] -> Either Interpreter.InterpretError (PropFormula a))
+        ([PropFormula a] -> Either EH.Error (PropFormula a))
   }
 
-instance Ord a => Interpreter.Interpreter (PropositionalLogicInterpreter a) a where
+instance Ord a => Interpreter.Interpreter (PropositionalLogicInterpreter a) a a where
   type LogicSystem (PropositionalLogicInterpreter a) = PropositionalLogic
   operatorByID = operatorByID
   variableFromID = const VAR
@@ -259,7 +260,7 @@ defaultPropositionalLogicInterpreter =
 propositionalLogicInterpreterFromNames ::
   Ord a =>
   [ ( [PropFormula a] ->
-      Either Interpreter.InterpretError (PropFormula a),
+      Either EH.Error (PropFormula a),
       [a]
     )
   ] ->
@@ -269,20 +270,20 @@ propositionalLogicInterpreterFromNames =
     . Map.fromList
     . concatMap (\(op, ns) -> map (,op) ns)
 
-true :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
+true :: [PropFormula a] -> Either EH.Error (PropFormula a)
 true = Interpreter.makeConstant TRUE "PropositionalLogic.TRUE"
 
-false :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
+false :: [PropFormula a] -> Either EH.Error (PropFormula a)
 false = Interpreter.makeConstant FALSE "PropositionalLogic.FALSE"
 
-not :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
+not :: [PropFormula a] -> Either EH.Error (PropFormula a)
 not = Interpreter.makeUnary NOT "PropositionalLogic.NOT"
 
-or :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
+or :: [PropFormula a] -> Either EH.Error (PropFormula a)
 or = Interpreter.makeBinary OR "PropositionalLogic.OR"
 
-and :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
+and :: [PropFormula a] -> Either EH.Error (PropFormula a)
 and = Interpreter.makeBinary AND "PropositionalLogic.AND"
 
-implies :: [PropFormula a] -> Either Interpreter.InterpretError (PropFormula a)
+implies :: [PropFormula a] -> Either EH.Error (PropFormula a)
 implies = Interpreter.makeBinary IMPLIES "PropositionalLogic.IMPLIES"
