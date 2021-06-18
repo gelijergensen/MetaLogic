@@ -6,18 +6,20 @@
 module LogicSystem where
 
 import qualified Data.Set as Set
+import GHC.Exts (Constraint)
 import qualified RApplicative as RApp
 
 class LogicSystem t where
   data Formula t :: * -> *
   data Rule t :: * -> *
+  type RuleConstraint t :: * -> Constraint
 
   mapFormula ::
     Ord (Formula t a) =>
     (Formula t a -> Frontier (Formula t a)) ->
     Formula t a ->
     Frontier (Formula t a)
-  rewriteRules :: Eq a => t -> [Rule t a]
+  rewriteRules :: RuleConstraint t a => t -> [Rule t a]
   runRule :: Rule t a -> Formula t a -> Formula t a
 
 data SearchEnv a = SearchEnv
@@ -54,7 +56,7 @@ instance Functor Completeness where
   fmap f (Incomplete a) = Incomplete $ f a
 
 rewriteOnceAtRoot ::
-  (Eq a, Ord (Formula t a), LogicSystem t) =>
+  (RuleConstraint t a, Ord (Formula t a), LogicSystem t) =>
   t ->
   Formula t a ->
   Set.Set (Formula t a)
@@ -62,7 +64,7 @@ rewriteOnceAtRoot sys =
   extractSearch . searchWithNeighbors (applyAllRules sys) . startSearch
 
 rewriteOnce ::
-  (Eq a, Ord (Formula t a), LogicSystem t) =>
+  (RuleConstraint t a, Ord (Formula t a), LogicSystem t) =>
   t ->
   Formula t a ->
   Set.Set (Formula t a)
@@ -74,7 +76,7 @@ rewriteOnce sys =
 {- Caution: Assumes that the rewriting process terminates!
    Use rewriteNTimes if process might not terminate -}
 rewrite ::
-  (Eq a, Ord (Formula t a), LogicSystem t) =>
+  (RuleConstraint t a, Ord (Formula t a), LogicSystem t) =>
   t ->
   Formula t a ->
   Set.Set (Formula t a)
@@ -82,7 +84,7 @@ rewrite sys =
   extractSearch . totalSearch (mapFormula (applyAllRules sys)) . startSearch
 
 rewriteNTimes ::
-  (Eq a, Ord (Formula t a), LogicSystem t) =>
+  (RuleConstraint t a, Ord (Formula t a), LogicSystem t) =>
   t ->
   Int ->
   Formula t a ->
@@ -93,7 +95,7 @@ rewriteNTimes sys n =
     . startSearch
 
 applyAllRules ::
-  (Eq a, Ord (Formula t a), LogicSystem t) =>
+  (RuleConstraint t a, Ord (Formula t a), LogicSystem t) =>
   t ->
   Formula t a ->
   Frontier (Formula t a)

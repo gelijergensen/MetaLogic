@@ -98,6 +98,7 @@ test-suite MetaLogic-test
     other-modules:    
         LogicSystemSpec
       , ParserSpec
+      , PeanoArithmeticSpec
       , PropositionalLogicSpec
 
     -- Test dependencies.
