@@ -1,5 +1,9 @@
 # Revision history for MetaLogic
 
+## 0.1.4.0 -- 2021-06-18
+
+* Logic system for Peano Arithmetic added
+
 ## 0.1.3.0 -- 2021-06-15
 
 * Logic systems fully defined, including rewrites
