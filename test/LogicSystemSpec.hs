@@ -28,6 +28,7 @@ instance LS.LogicSystem TestLogic where
         TestFormula a ->
         TestFormula a
     }
+  type RuleConstraint TestLogic = Eq
 
   rewriteRules = const . map Rule $ [_andTrue, _andFalse, _andSame]
   mapFormula f term@(AND x y) =
@@ -71,6 +72,7 @@ instance Arbitrary a => Arbitrary (LS.Formula TestLogic a) where
               (1, VAR <$> arbitrary),
               (2, liftM2 AND (formula' halfN) (formula' halfN))
             ]
+        | otherwise = error "negative size"
         where
           halfN = n `div` 2
 

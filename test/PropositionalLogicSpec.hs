@@ -31,6 +31,7 @@ instance Arbitrary a => Arbitrary (LS.Formula P.PropositionalLogic a) where
               (2, liftM2 P.AND (formula' halfN) (formula' halfN)),
               (2, liftM2 P.IMPLIES (formula' halfN) (formula' halfN))
             ]
+        | otherwise = error "negative size"
         where
           halfN = n `div` 2
 
