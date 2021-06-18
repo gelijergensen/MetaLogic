@@ -65,7 +65,7 @@ mapFormula f term = f term
 -- Approximate measure of complexity of formula
 -- No rewrite rule should increase this
 complexity :: PeanoFormula a -> Int
-complexity ZERO = 0
+complexity ZERO = 1
 complexity (VAR _) = 1
 complexity (S x) = 1 + complexity x
 complexity (PLUS x y) = 1 + complexity x + complexity y
