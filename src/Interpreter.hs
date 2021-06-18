@@ -13,7 +13,6 @@ import qualified LogicSystem as LS
 class (Ord a, LS.LogicSystem (LogicSystem i)) => Interpreter i a b where
   type LogicSystem i :: *
 
-  -- todo later upgrade this using the Reader type / monad
   operatorByID ::
     i ->
     Map.Map
@@ -33,6 +32,7 @@ interpret i (AST.AST n children) = case Map.lookup n (operatorByID i) of
   Nothing -> pure $ variableFromID i n
   (Just op) -> mapM (interpret i) children >>= op
 
+-- Convenience constructors
 makeConstant ::
   LS.Formula t a ->
   String ->
