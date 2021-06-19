@@ -121,16 +121,21 @@ _plusZero x = x
 _plusNeg :: Ord a => Polynomial a -> Polynomial a
 _plusNeg (PLUS xs) =
   PLUS $
-    MultiSet.difference
-      xs
-      (MultiSet.union duplicates (MultiSet.mapMonotonic NEG duplicates))
+    MultiSet.fold removeDuplicatesIteratively MultiSet.empty xs
   where
-    duplicates = MultiSet.intersection xs (MultiSet.mapMonotonic unNeg neg)
-    unNeg (NEG x) = x
-    unNeg _ = error "Expected NEG in _plusNeg"
-    (neg, pos) = MultiSet.partition isNeg xs
-    isNeg (NEG _) = True
-    isNeg _ = False
+    removeDuplicatesIteratively x ys =
+      case MultiSet.maxView $ duplicates x ys of
+        Just (y, _) -> MultiSet.delete y ys
+        Nothing -> MultiSet.insert x ys
+    duplicates x ys =
+      MultiSet.union
+        (MultiSet.filter (== NEG x) ys)
+        (MultiSet.filter ((== x) . NEG) ys)
+-- unNeg (NEG x) = x
+-- unNeg _ = error "Expected NEG in _plusNeg"
+-- (neg, pos) = MultiSet.partition isNeg xs
+-- isNeg (NEG _) = True
+-- isNeg _ = False
 _plusNeg x = x
 
 _plusSingle :: Polynomial a -> Polynomial a
