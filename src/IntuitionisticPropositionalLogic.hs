@@ -39,7 +39,32 @@ instance LS.LogicSystem PropositionalLogic where
   mapFormula = mapFormula
   rewriteRules =
     const . map Rule $
-      []
+      [ _notTrue,
+        _orCommutative,
+        _orAssociativeL,
+        _orAssociativeR,
+        _orTrue,
+        _orFalse,
+        _orSame,
+        _orDistributive1,
+        _orDistributive2,
+        _orDistributive3,
+        _orDistributive4,
+        _andCommutative,
+        _andAssociativeL,
+        _andAssociativeR,
+        _andTrue,
+        _andFalse,
+        _andSame,
+        _andDistributive1,
+        _andDistributive2,
+        _andDistributive3,
+        _andDistributive4,
+        _trueImplies,
+        _modusPonens,
+        _impliesImplies,
+        _implicativeNegation
+      ]
   runRule = runRule
 
 -- todo for large formulas, e.g.
@@ -72,6 +97,138 @@ complexity (AND x y) = 1 + complexity x + complexity y
 complexity (IMPLIES x y) = 2 + complexity x + complexity y
 
 ---------- Rewrite Rules ----------
+
+_notTrue :: PropFormula a -> PropFormula a
+_notTrue (NOT TRUE) = FALSE
+_notTrue x = x
+
+_orCommutative :: PropFormula a -> PropFormula a
+_orCommutative (OR x y) = OR y x
+_orCommutative x = x
+
+_orAssociativeL :: PropFormula a -> PropFormula a
+_orAssociativeL (OR (OR x y) z) = OR x (OR y z)
+_orAssociativeL x = x
+
+_orAssociativeR :: PropFormula a -> PropFormula a
+_orAssociativeR (OR x (OR y z)) = OR (OR x y) z
+_orAssociativeR x = x
+
+_orTrue :: PropFormula a -> PropFormula a
+_orTrue (OR TRUE _) = TRUE
+_orTrue (OR _ TRUE) = TRUE
+_orTrue x = x
+
+_orFalse :: PropFormula a -> PropFormula a
+_orFalse (OR FALSE x) = x
+_orFalse (OR x FALSE) = x
+_orFalse x = x
+
+_orSame :: Eq a => PropFormula a -> PropFormula a
+_orSame (OR x y)
+  | x == y = x
+_orSame x = x
+
+_orDistributive1 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive1 (OR (AND w x) (AND y z))
+  | w == y = AND w (OR x z)
+_orDistributive1 x = x
+
+_orDistributive2 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive2 (OR (AND w x) (AND y z))
+  | w == z = AND w (OR x y)
+_orDistributive2 x = x
+
+_orDistributive3 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive3 (OR (AND w x) (AND y z))
+  | x == y = AND x (OR w z)
+_orDistributive3 x = x
+
+_orDistributive4 :: Eq a => PropFormula a -> PropFormula a
+_orDistributive4 (OR (AND w x) (AND y z))
+  | x == z = AND x (OR w y)
+_orDistributive4 x = x
+
+_andCommutative :: PropFormula a -> PropFormula a
+_andCommutative (AND x y) = AND y x
+_andCommutative x = x
+
+_andAssociativeL :: PropFormula a -> PropFormula a
+_andAssociativeL (AND (AND x y) z) = AND x (AND y z)
+_andAssociativeL x = x
+
+_andAssociativeR :: PropFormula a -> PropFormula a
+_andAssociativeR (AND x (AND y z)) = AND (AND x y) z
+_andAssociativeR x = x
+
+_andTrue :: PropFormula a -> PropFormula a
+_andTrue (AND TRUE x) = x
+_andTrue (AND x TRUE) = x
+_andTrue x = x
+
+_andFalse :: PropFormula a -> PropFormula a
+_andFalse (AND FALSE _) = FALSE
+_andFalse (AND _ FALSE) = FALSE
+_andFalse x = x
+
+_andSame :: Eq a => PropFormula a -> PropFormula a
+_andSame (AND x y)
+  | x == y = x
+_andSame x = x
+
+_andDistributive1 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive1 (AND (OR w x) (OR y z))
+  | w == y = OR w (AND x z)
+_andDistributive1 x = x
+
+_andDistributive2 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive2 (AND (OR w x) (OR y z))
+  | w == z = OR w (AND x y)
+_andDistributive2 x = x
+
+_andDistributive3 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive3 (AND (OR w x) (OR y z))
+  | x == y = OR x (AND w z)
+_andDistributive3 x = x
+
+_andDistributive4 :: Eq a => PropFormula a -> PropFormula a
+_andDistributive4 (AND (OR w x) (OR y z))
+  | x == z = OR x (AND w y)
+_andDistributive4 x = x
+
+_trueImplies :: PropFormula a -> PropFormula a
+_trueImplies (IMPLIES TRUE x) = x
+_trueImplies x = x
+
+_modusPonens :: Eq a => PropFormula a -> PropFormula a
+_modusPonens term@(AND x (IMPLIES y z))
+  | x == y = z
+  | otherwise = term
+_modusPonens term@(AND (IMPLIES x y) z)
+  | x == z = y
+  | otherwise = term
+_modusPonens x = x
+
+_impliesImplies :: Eq a => PropFormula a -> PropFormula a
+_impliesImplies term@(AND (IMPLIES w x) (IMPLIES y z))
+  | x == y = IMPLIES w z
+  | w == z = IMPLIES y x
+  | otherwise = term
+_impliesImplies x = x
+
+-- -- this direction still holds (but not the inverse!)
+-- _orDeMorgan :: PropFormula a -> PropFormula a
+-- _orDeMorgan (OR (NOT x) (NOT y)) = NOT (AND x y)
+-- _orDeMorgan x = x
+
+-- -- both directions hold here
+-- _andDeMorgan :: PropFormula a -> PropFormula a
+-- _andDeMorgan (AND (NOT x) (NOT y)) = NOT (OR x y)
+-- _andDeMorgan x = x
+
+_implicativeNegation :: PropFormula a -> PropFormula a
+_implicativeNegation (NOT x) = IMPLIES x FALSE
+_implicativeNegation x = x
 
 ---------- Interpreters ----------
 newtype PropositionalLogicInterpreter a = PropositionalLogicInterpreter
