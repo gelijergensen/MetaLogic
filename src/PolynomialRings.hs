@@ -41,7 +41,8 @@ instance LS.LogicSystem PolynomialRings where
   mapFormula = mapFormula
   rewriteRules =
     const . map Rule $
-      [ _emptyPlus,
+      [ _negNeg,
+        _emptyPlus,
         _plusZero,
         _plusNeg,
         _plusSingle,
@@ -89,7 +90,23 @@ multiSetCartesianProductWith f =
     . map ((\(xs, c) -> map (,c) xs) . Bifunc.first f)
     . MultiSet.toOccurList
 
+isNeg :: Polynomial a -> Bool
+isNeg (NEG _) = True
+isNeg _ = False
+
+isPlus :: Polynomial a -> Bool
+isPlus (PLUS _) = True
+isPlus _ = False
+
+isTimes :: Polynomial a -> Bool
+isTimes (TIMES _) = True
+isTimes _ = False
+
 ---------- Rewrite Rules ----------
+
+_negNeg :: Polynomial a -> Polynomial a
+_negNeg (NEG (NEG x)) = x
+_negNeg x = x
 
 _emptyPlus :: Polynomial a -> Polynomial a
 _emptyPlus x@(PLUS xs)
@@ -104,15 +121,13 @@ _plusZero x = x
 _plusNeg :: Ord a => Polynomial a -> Polynomial a
 _plusNeg (PLUS xs) =
   PLUS $
-    MultiSet.union
-      (MultiSet.difference pos negAsPos)
-      (MultiSet.mapMonotonic NEG (MultiSet.difference negAsPos pos))
+    MultiSet.difference
+      xs
+      (MultiSet.union duplicates (MultiSet.mapMonotonic NEG duplicates))
   where
-    negAsPos = MultiSet.mapMonotonic unNeg neg
+    duplicates = MultiSet.intersection xs (MultiSet.mapMonotonic unNeg neg)
     unNeg (NEG x) = x
     unNeg _ = error "Expected NEG in _plusNeg"
-    symDiff as bs =
-      MultiSet.difference as bs `MultiSet.union` MultiSet.difference bs as
     (neg, pos) = MultiSet.partition isNeg xs
     isNeg (NEG _) = True
     isNeg _ = False
@@ -185,7 +200,7 @@ _distributive x@(TIMES xs)
     PLUS
       . MultiSet.fromList
       . map TIMES
-      $ multiSetCartesianProductWith termsList xs
+      $ flatMultiSetCartesianProductWith termsList xs
   | otherwise = x
   where
     termsList (PLUS ys) = MultiSet.toList ys
@@ -193,6 +208,15 @@ _distributive x@(TIMES xs)
     isPlus (PLUS _) = True
     isPlus _ = False
 _distributive x = x
+
+flatMultiSetCartesianProductWith ::
+  Ord a => (a -> [a]) -> MultiSet.MultiSet a -> [MultiSet.MultiSet a]
+flatMultiSetCartesianProductWith f =
+  map
+    MultiSet.fromList
+    . LS.cartesianProduct
+    . map f
+    . MultiSet.toList
 
 ---------- Interpreters ----------
 data PolynomialRingsInterpreter a = PolynomialRingsInterpreter

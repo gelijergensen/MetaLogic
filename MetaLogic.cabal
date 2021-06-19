@@ -101,6 +101,7 @@ test-suite MetaLogic-test
         LogicSystemSpec
       , ParserSpec
       , PeanoArithmeticSpec
+      , PolynomialRingsSpec
       , PropositionalLogicSpec
 
     -- Test dependencies.
@@ -109,6 +110,7 @@ test-suite MetaLogic-test
       , containers
       , hspec
       , QuickCheck
+      , multiset
       , MetaLogic
 
     build-tool-depends: hspec-discover:hspec-discover
