@@ -76,7 +76,7 @@ library
       , TypeFamilies
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.14.1.0, containers, parsec
+    build-depends:    base ^>=4.14.1.0, containers, parsec, multiset
 
     -- Directories containing source files.
     hs-source-dirs:   src

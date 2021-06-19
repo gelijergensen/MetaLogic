@@ -50,6 +50,14 @@ instance RApp.RApplicative Frontier where
   liftA2 f (Frontier xs) (Frontier ys) =
     Frontier $ Set.map (uncurry f) $ Set.cartesianProduct xs ys
 
+frontierProduct :: Ord a => [Frontier a] -> Frontier [a]
+frontierProduct =
+  Frontier . Set.fromList . cartesianProduct . map (Set.toList . unFrontier)
+
+cartesianProduct :: [[a]] -> [[a]]
+cartesianProduct [] = [[]]
+cartesianProduct (xs : xss) = [x' : xs' | x' <- xs, xs' <- cartesianProduct xss]
+
 data Completeness a = Complete a | Incomplete a deriving (Eq, Show)
 
 instance Functor Completeness where

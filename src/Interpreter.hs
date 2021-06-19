@@ -7,6 +7,8 @@ module Interpreter where
 import qualified AbstractSyntaxTree as AST
 import Data.Functor ((<&>))
 import qualified Data.Map as Map
+import qualified Data.MultiSet as MultiSet
+import qualified Data.Sequence as Seq
 import qualified ErrorHandling as EH
 import qualified LogicSystem as LS
 
@@ -65,3 +67,18 @@ makeBinary _ name [_] =
 makeBinary op _ [x, y] = Right $ op x y
 makeBinary _ name _ =
   Left $ EH.interpretError $ name ++ " expects 2 children; recieved 3 or more"
+
+makeOrderedVariadic ::
+  (Seq.Seq (LS.Formula t a) -> LS.Formula t a) ->
+  String ->
+  [LS.Formula t a] ->
+  Either EH.Error (LS.Formula t a)
+makeOrderedVariadic op _ = Right . op . Seq.fromList
+
+makeUnorderedVariadic ::
+  Ord (LS.Formula t a) =>
+  (MultiSet.MultiSet (LS.Formula t a) -> LS.Formula t a) ->
+  String ->
+  [LS.Formula t a] ->
+  Either EH.Error (LS.Formula t a)
+makeUnorderedVariadic op _ = Right . op . MultiSet.fromList
