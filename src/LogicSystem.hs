@@ -12,7 +12,8 @@ import qualified RApplicative as RApp
 class LogicSystem t where
   data Formula t :: * -> *
   data Rule t :: * -> *
-  type RuleConstraint t :: * -> Constraint
+  type RuleConstraint t a :: Constraint
+  type RuleConstraint t a = ()
 
   mapFormula ::
     Ord (Formula t a) =>
@@ -48,6 +49,14 @@ instance RApp.RApplicative Frontier where
   fmap f (Frontier x) = Frontier $ Set.map f x
   liftA2 f (Frontier xs) (Frontier ys) =
     Frontier $ Set.map (uncurry f) $ Set.cartesianProduct xs ys
+
+frontierProduct :: Ord a => [Frontier a] -> Frontier [a]
+frontierProduct =
+  Frontier . Set.fromList . cartesianProduct . map (Set.toList . unFrontier)
+
+cartesianProduct :: [[a]] -> [[a]]
+cartesianProduct [] = [[]]
+cartesianProduct (xs : xss) = [x' : xs' | x' <- xs, xs' <- cartesianProduct xss]
 
 data Completeness a = Complete a | Incomplete a deriving (Eq, Show)
 

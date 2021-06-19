@@ -31,7 +31,7 @@ instance LS.LogicSystem PeanoArithmetic where
         PeanoFormula a ->
         PeanoFormula a
     }
-  type RuleConstraint PeanoArithmetic = Ord
+  type RuleConstraint PeanoArithmetic a = Ord a
 
   mapFormula = mapFormula
   rewriteRules =

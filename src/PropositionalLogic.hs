@@ -34,7 +34,7 @@ instance LS.LogicSystem PropositionalLogic where
         PropFormula a ->
         PropFormula a
     }
-  type RuleConstraint PropositionalLogic = Eq
+  type RuleConstraint PropositionalLogic a = Eq a
 
   mapFormula = mapFormula
   rewriteRules =

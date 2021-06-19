@@ -14,7 +14,7 @@ name:               MetaLogic
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:            0.1.4.1
+version:            0.1.5.0
 
 -- A short (one-line) description of the package.
 synopsis:
@@ -59,6 +59,7 @@ library
       , LogicSystem
       , Parser
       , PeanoArithmetic
+      , PolynomialRings
       , PropositionalLogic
       , RApplicative
 
@@ -75,7 +76,7 @@ library
       , TypeFamilies
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.14.1.0, containers, parsec
+    build-depends:    base ^>=4.14.1.0, containers, parsec, multiset
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -100,6 +101,7 @@ test-suite MetaLogic-test
         LogicSystemSpec
       , ParserSpec
       , PeanoArithmeticSpec
+      , PolynomialRingsSpec
       , PropositionalLogicSpec
 
     -- Test dependencies.
@@ -108,6 +110,7 @@ test-suite MetaLogic-test
       , containers
       , hspec
       , QuickCheck
+      , multiset
       , MetaLogic
 
     build-tool-depends: hspec-discover:hspec-discover
