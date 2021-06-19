@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module PropositionalLogicSpec where
+module ClassicalPropositionalLogicSpec where
 
+import qualified ClassicalPropositionalLogic as P
 import Control.Monad (liftM2)
 import qualified Data.Set as Set
 import qualified LogicSystem as LS
-import qualified PropositionalLogic as P
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck

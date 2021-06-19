@@ -1,27 +1,39 @@
 module Main where
 
+import qualified ClassicalPropositionalLogic as CPL
 import Control.Monad ((<=<), (>=>))
 import Data.Either (fromRight)
 import qualified Data.Set as Set
 import qualified ErrorHandling as EH
 import Interpreter (interpret)
+import qualified IntuitionisticPropositionalLogic as IPL
 import qualified LogicSystem as LS
 import Parser (parseAST)
 import PeanoArithmetic
 import PolynomialRings
-import PropositionalLogic
 
 main :: IO ()
 main = putStrLn "Main does run"
 
-parseAsPropFormula ::
-  String -> Either EH.Error (PropFormula String)
-parseAsPropFormula =
-  interpret defaultPropositionalLogicInterpreter
+parseAsClassicalPropFormula ::
+  String -> Either EH.Error (CPL.PropFormula String)
+parseAsClassicalPropFormula =
+  interpret CPL.defaultPropositionalLogicInterpreter
     <=< parseAST
 
-rewriteProp :: Ord a => PropFormula a -> Set.Set (PropFormula a)
-rewriteProp = LS.rewrite PropositionalLogic
+rewriteClassicalProp ::
+  Ord a => CPL.PropFormula a -> Set.Set (CPL.PropFormula a)
+rewriteClassicalProp = LS.rewrite CPL.PropositionalLogic
+
+parseAsIntuitionisticPropFormula ::
+  String -> Either EH.Error (IPL.PropFormula String)
+parseAsIntuitionisticPropFormula =
+  interpret IPL.defaultPropositionalLogicInterpreter
+    <=< parseAST
+
+rewriteIntuitionisticProp ::
+  Ord a => IPL.PropFormula a -> Set.Set (IPL.PropFormula a)
+rewriteIntuitionisticProp = LS.rewrite IPL.PropositionalLogic
 
 parseAsPeanoFormula ::
   String -> Either EH.Error (PeanoFormula String)
