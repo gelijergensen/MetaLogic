@@ -1,5 +1,9 @@
 # Revision history for MetaLogic
 
+## 0.1.5.1 -- 2021-06-19
+
+* Logic system for polynomials added
+
 ## 0.1.4.1 -- 2021-06-18
 
 * Internals of error handling cleaned up
