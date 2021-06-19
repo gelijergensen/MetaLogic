@@ -74,9 +74,10 @@ spec = do
           (rewriteOnceAtRoot $ P.PLUS (MultiSet.fromList (xs ++ P.ZERO : ys)))
     prop "PLUS x (NEG x) y ~~> PLUS y" $
       \x y ->
-        Set.member
-          (P.PLUS (MultiSet.fromList [y]) :: P.Polynomial Int)
-          (rewriteOnceAtRoot $ P.PLUS (MultiSet.fromList [x, P.NEG x, y]))
+        y /= P.NEG (P.NEG x)
+          ==> Set.member
+            (P.PLUS (MultiSet.fromList [y]) :: P.Polynomial Int)
+            (rewriteOnceAtRoot $ P.PLUS (MultiSet.fromList [x, P.NEG x, y]))
     prop "PLUS x ~~> x" $
       \x ->
         Set.member
