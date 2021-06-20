@@ -14,7 +14,7 @@ name:               MetaLogic
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:            0.1.5.0
+version:            0.1.6.0
 
 -- A short (one-line) description of the package.
 synopsis:
@@ -54,13 +54,14 @@ library
     exposed-modules:  
         Main
       , AbstractSyntaxTree
+      , ClassicalPropositionalLogic
       , ErrorHandling
       , Interpreter
+      , IntuitionisticPropositionalLogic
       , LogicSystem
       , Parser
       , PeanoArithmetic
       , PolynomialRings
-      , PropositionalLogic
       , RApplicative
 
     -- Modules included in this library but not exported.
@@ -98,11 +99,12 @@ test-suite MetaLogic-test
     main-is:          Spec.hs
 
     other-modules:    
-        LogicSystemSpec
+        ClassicalPropositionalLogicSpec
+      , IntuitionisticPropositionalLogicSpec
+      , LogicSystemSpec
       , ParserSpec
       , PeanoArithmeticSpec
       , PolynomialRingsSpec
-      , PropositionalLogicSpec
 
     -- Test dependencies.
     build-depends:    
