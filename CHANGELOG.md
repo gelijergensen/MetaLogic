@@ -1,6 +1,10 @@
 # Revision history for MetaLogic
 
-## 0.1.5.1 -- 2021-06-19
+## 0.1.6.0 -- 2021-06-20
+
+* Logic system for intuitionistic propositional logic added
+
+## 0.1.5.0 -- 2021-06-19
 
 * Logic system for polynomials added
 

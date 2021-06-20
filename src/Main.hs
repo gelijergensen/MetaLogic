@@ -9,8 +9,8 @@ import Interpreter (interpret)
 import qualified IntuitionisticPropositionalLogic as IPL
 import qualified LogicSystem as LS
 import Parser (parseAST)
-import PeanoArithmetic
-import PolynomialRings
+import qualified PeanoArithmetic as PA
+import qualified PolynomialRings as PR
 
 main :: IO ()
 main = putStrLn "Main does run"
@@ -36,22 +36,22 @@ rewriteIntuitionisticProp ::
 rewriteIntuitionisticProp = LS.rewrite IPL.PropositionalLogic
 
 parseAsPeanoFormula ::
-  String -> Either EH.Error (PeanoFormula String)
+  String -> Either EH.Error (PA.PeanoFormula String)
 parseAsPeanoFormula =
-  interpret defaultPeanoArithmeticInterpreter
+  interpret PA.defaultPeanoArithmeticInterpreter
     <=< parseAST
 
-rewritePeano :: Ord a => PeanoFormula a -> Set.Set (PeanoFormula a)
-rewritePeano = LS.rewrite PeanoArithmetic
+rewritePeano :: Ord a => PA.PeanoFormula a -> Set.Set (PA.PeanoFormula a)
+rewritePeano = LS.rewrite PA.PeanoArithmetic
 
 parseAsPolynomial ::
-  String -> Either EH.Error (Polynomial String)
+  String -> Either EH.Error (PR.Polynomial String)
 parseAsPolynomial =
-  interpret defaultPolynomialRingsInterpreter
+  interpret PR.defaultPolynomialRingsInterpreter
     <=< parseAST
 
-rewritePolynomial :: Ord a => Polynomial a -> Set.Set (Polynomial a)
-rewritePolynomial = LS.rewrite PolynomialRings
+rewritePolynomial :: Ord a => PR.Polynomial a -> Set.Set (PR.Polynomial a)
+rewritePolynomial = LS.rewrite PR.PolynomialRings
 
 unRight :: Either a b -> b
 unRight = fromRight undefined
