@@ -85,6 +85,20 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
+executable metalogic-calc
+    -- The entrypoint to the executable.
+    main-is:          Main.hs
+
+    -- Executable dependencies.
+    build-depends:    base ^>=4.14.1.0, containers, MetaLogic
+
+    -- Directories containing source files.
+    hs-source-dirs:   exe
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+    
+
 test-suite MetaLogic-test
     -- Base language which the package is written in.
     default-language: Haskell2010
