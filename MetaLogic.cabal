@@ -100,7 +100,7 @@ test-suite MetaLogic-test
 
     other-modules:    
         ClassicalPropositionalLogicSpec
-      -- , IntuitionisticPropositionalLogicSpec
+      , IntuitionisticPropositionalLogicSpec
       , LogicSystemSpec
       , ParserSpec
       , PeanoArithmeticSpec

@@ -39,8 +39,7 @@ instance LS.LogicSystem PropositionalLogic where
   mapFormula = mapFormula
   rewriteRules =
     const . map Rule $
-      [ _notTrue,
-        _orCommutative,
+      [ _orCommutative,
         _orAssociativeL,
         _orAssociativeR,
         _orTrue,
@@ -62,7 +61,18 @@ instance LS.LogicSystem PropositionalLogic where
         _andDistributive4,
         _trueImplies,
         _modusPonens,
-        _impliesImplies,
+        _andOrImplies1,
+        _andOrImplies2,
+        _andOrImplies3,
+        _andOrImplies4,
+        _andImpliesImplies1,
+        _andImpliesImplies2,
+        _andImpliesImplies3,
+        _andImpliesImplies4,
+        _orImpliesImplies1,
+        _orImpliesImplies4,
+        _importation,
+        _tautology,
         _implicativeNegation
       ]
   runRule = runRule
@@ -90,17 +100,13 @@ complexity :: PropFormula a -> Int
 complexity TRUE = 0
 complexity FALSE = 0
 complexity (VAR _) = 1
+-- special case, as NOT x is defined to be IMPLIES x FALSE
 complexity (NOT x) = 1 + complexity x
 complexity (OR x y) = 1 + complexity x + complexity y
 complexity (AND x y) = 1 + complexity x + complexity y
--- special case, as IMPLIES x y is defined to be OR (NOT x) y
-complexity (IMPLIES x y) = 2 + complexity x + complexity y
+complexity (IMPLIES x y) = 1 + complexity x + complexity y
 
 ---------- Rewrite Rules ----------
-
-_notTrue :: PropFormula a -> PropFormula a
-_notTrue (NOT TRUE) = FALSE
-_notTrue x = x
 
 _orCommutative :: PropFormula a -> PropFormula a
 _orCommutative (OR x y) = OR y x
@@ -200,31 +206,79 @@ _trueImplies :: PropFormula a -> PropFormula a
 _trueImplies (IMPLIES TRUE x) = x
 _trueImplies x = x
 
+-- weakens formula slightly
 _modusPonens :: Eq a => PropFormula a -> PropFormula a
-_modusPonens term@(AND x (IMPLIES y z))
+_modusPonens (AND x (IMPLIES y z))
   | x == y = z
-  | otherwise = term
-_modusPonens term@(AND (IMPLIES x y) z)
+_modusPonens (AND (IMPLIES x y) z)
   | x == z = y
-  | otherwise = term
 _modusPonens x = x
 
-_impliesImplies :: Eq a => PropFormula a -> PropFormula a
-_impliesImplies term@(AND (IMPLIES w x) (IMPLIES y z))
-  | x == y = IMPLIES w z
+-- weakens formula slightly
+_andOrImplies1 :: Eq a => PropFormula a -> PropFormula a
+_andOrImplies1 (AND (OR w x) (IMPLIES y z))
+  | w == y = OR x z
+_andOrImplies1 x = x
+
+-- weakens formula slightly
+_andOrImplies2 :: Eq a => PropFormula a -> PropFormula a
+_andOrImplies2 (AND (OR w x) (IMPLIES y z))
+  | x == y = OR w z
+_andOrImplies2 x = x
+
+-- weakens formula slightly
+_andOrImplies3 :: Eq a => PropFormula a -> PropFormula a
+_andOrImplies3 (AND (IMPLIES y z) (OR w x))
+  | w == y = OR x z
+_andOrImplies3 x = x
+
+-- weakens formula slightly
+_andOrImplies4 :: Eq a => PropFormula a -> PropFormula a
+_andOrImplies4 (AND (IMPLIES y z) (OR w x))
+  | x == y = OR w z
+_andOrImplies4 x = x
+
+_andImpliesImplies1 :: Eq a => PropFormula a -> PropFormula a
+_andImpliesImplies1 (AND (IMPLIES w x) (IMPLIES y z))
+  | w == y = IMPLIES w (AND x z)
+_andImpliesImplies1 x = x
+
+-- weakens formula slightly
+_andImpliesImplies2 :: Eq a => PropFormula a -> PropFormula a
+_andImpliesImplies2 (AND (IMPLIES w x) (IMPLIES y z))
   | w == z = IMPLIES y x
-  | otherwise = term
-_impliesImplies x = x
+_andImpliesImplies2 x = x
 
--- -- this direction still holds (but not the inverse!)
--- _orDeMorgan :: PropFormula a -> PropFormula a
--- _orDeMorgan (OR (NOT x) (NOT y)) = NOT (AND x y)
--- _orDeMorgan x = x
+-- weakens formula slightly
+_andImpliesImplies3 :: Eq a => PropFormula a -> PropFormula a
+_andImpliesImplies3 (AND (IMPLIES w x) (IMPLIES y z))
+  | x == y = IMPLIES w z
+_andImpliesImplies3 x = x
 
--- -- both directions hold here
--- _andDeMorgan :: PropFormula a -> PropFormula a
--- _andDeMorgan (AND (NOT x) (NOT y)) = NOT (OR x y)
--- _andDeMorgan x = x
+-- weakens formula slightly
+_andImpliesImplies4 :: Eq a => PropFormula a -> PropFormula a
+_andImpliesImplies4 (AND (IMPLIES w x) (IMPLIES y z))
+  | x == z = IMPLIES (OR w y) x
+_andImpliesImplies4 x = x
+
+_orImpliesImplies1 :: Eq a => PropFormula a -> PropFormula a
+_orImpliesImplies1 (OR (IMPLIES w x) (IMPLIES y z))
+  | w == y = IMPLIES w (OR x z)
+_orImpliesImplies1 x = x
+
+-- weakens formula slightly
+_orImpliesImplies4 :: Eq a => PropFormula a -> PropFormula a
+_orImpliesImplies4 (OR (IMPLIES w x) (IMPLIES y z))
+  | x == z = IMPLIES (AND w y) z
+_orImpliesImplies4 x = x
+
+_importation :: PropFormula a -> PropFormula a
+_importation (IMPLIES x (IMPLIES y z)) = IMPLIES (AND x y) z
+_importation x = x
+
+_tautology :: PropFormula a -> PropFormula a
+_tautology (IMPLIES x TRUE) = TRUE
+_tautology x = x
 
 _implicativeNegation :: PropFormula a -> PropFormula a
 _implicativeNegation (NOT x) = IMPLIES x FALSE
