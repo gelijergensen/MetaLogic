@@ -89,8 +89,11 @@ executable metalogic-calc
     -- The entrypoint to the executable.
     main-is:          Main.hs
 
+    -- Modules included in this library but not exported.
+    other-modules:    ReplParser
+
     -- Executable dependencies.
-    build-depends:    base ^>=4.14.1.0, containers, MetaLogic
+    build-depends:    base ^>=4.14.1.0, containers, parsec, MetaLogic
 
     -- Directories containing source files.
     hs-source-dirs:   exe

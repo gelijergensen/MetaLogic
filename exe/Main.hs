@@ -14,6 +14,7 @@ import qualified LogicSystem as LS
 import Parser (parseAST)
 import qualified PeanoArithmetic as PA
 import qualified PolynomialRings as PR
+import qualified ReplParser
 
 data System = forall s.
   LS.LogicSystem s =>
@@ -23,15 +24,12 @@ data System = forall s.
     system :: s
   }
 
-data UserInput
-  = Quit
-  | NewSystem System
-  | NewFormula Identifier String
-  | Step Identifier
-  | Rewrite Identifier
-  | Undetermined
+-- data Envs
+--   = forall s.
+--     LS.LogicSystem s =>
+--     Envs (Map.Map String (Map.Map Identifier (LS.Formula s String)))
 
-newtype Identifier = Identifier {getID :: String}
+-- newtype Identifier = Identifier {getID :: String}
 
 main :: IO ()
 main = startup
@@ -39,26 +37,30 @@ main = startup
 startup :: IO ()
 startup = do
   putStrLn "Welcome to the MetaLogic Calculator!"
-  putStrLn "You may quit at any time by typing \"quit\"\n"
+  putStrLn $
+    "You may quit at any time by typing \":quit\". "
+      ++ "For help, type \":help\".\n"
   loopInputSystem
   where
     loopInputSystem = do
       putStrLn "What logic system would you like to work with today?"
       putStrLn $ unlines $ map printLogicSystem availableLogicSystems
-      ins <- handleInput processSystem
+      ins <- getLine
       case ins of
-        Quit -> quit
-        NewSystem currentSystem ->
-          do
+        ":quit" -> quit
+        ":h" -> help
+        ":help" -> help
+        x -> case chooseSystem x of
+          Nothing -> do
+            putStrLn "I don't recognize that system. Please try again."
+            loopInputSystem
+          Just currentSystem -> do
             putStrLn $
               name currentSystem
                 ++ " selected. "
                 ++ "You may change this at any time by typing "
-                ++ "\"set \" followed by a logic system name.\n"
+                ++ "\":set system\" followed by a logic system name.\n"
             startRepl currentSystem
-        _ -> do
-          putStrLn "I don't recognize that system. Please try again."
-          loopInputSystem
 
 quit :: IO ()
 quit = putStrLn "Goodbye!"
@@ -71,27 +73,68 @@ startRepl currentSystem = do
   putStrLn $
     "Please enter a formula. You may name formulas for later reference "
       ++ "by writing <name> = <formula>. For example, \"x = TRUE\"."
+  putStrLn $
+    "Once a formula has been entered, you may perform a single rewrite step "
+      ++ "on it by typing \":step <name>\" or a complete rewrite by typing "
+      ++ "\":rewrite <name>\". If no name is given, the last unnamed formula "
+      ++ "will be used."
   repl currentSystem
 
 repl :: System -> IO ()
 repl currentSystem = do
-  notImplemented
+  ins <- ReplParser.parseInput <$> getLine
+  case ins of
+    ReplParser.Quit -> quit
+    ReplParser.Help -> help *> repl currentSystem
+    ReplParser.NewSystem sys -> case chooseSystem sys of
+      Nothing -> do
+        putStrLn $
+          "I don't recognize that system. The current system is "
+            ++ name currentSystem
+            ++ ". You can choose from"
+        putStrLn $ unlines $ map printLogicSystem availableLogicSystems
+        repl currentSystem
+      Just newSystem -> do
+        putStrLn $ "Switched to " ++ name newSystem ++ "."
+        repl newSystem
+    x -> print x *> notImplemented
+
+help :: IO ()
+help = do
+  putStrLn "Typing \":help\" or \":h\" shows this help."
+  putStrLn "You can quit at any time by typing \":quit\"."
+  putStrLn $
+    "You can choose a new logical system by typing "
+      ++ "\":set system\" followed by a logic system name."
+  putStrLn $
+    "You can rewrite a formula completely by typing "
+      ++ "\":rewrite\" followed by a formula identifier. "
+      ++ "If no formula is specified, the last unnamed formula will be used."
+  putStrLn $
+    "You can perform a single rewrite step on a formula by typing "
+      ++ "\":step\" followed by a formula identifier. "
+      ++ "If no formula is specified, the last unnamed formula will be used."
+  putStrLn $
+    "Any other input will be interpreted as a formula. "
+      ++ "You can name a formula by typing <name> = <formula>. "
+      ++ "For example, \"x = TRUE\". "
+      ++ "In rare situations, it might be necessary to wrap the formula in "
+      ++ "parentheses for it to be interpreted correctly."
 
 --------- User input ----------
-handleInput :: (String -> UserInput) -> IO UserInput
-handleInput f = withQuit f <$> getLine
+-- handleInput :: (String -> UserInput) -> IO UserInput
+-- handleInput f = withQuit f <$> getLine
 
-withQuit :: (String -> UserInput) -> String -> UserInput
-withQuit _ "quit" = Quit
-withQuit f x = f x
-
-processSystem :: String -> UserInput
-processSystem xs =
-  maybe Undetermined NewSystem (Map.lookup xs logicSystemsMap)
+-- withQuit :: (String -> UserInput) -> String -> UserInput
+-- withQuit _ "quit" = Quit
+-- withQuit f x = f x
 
 --------- Logic Systems ----------
 printLogicSystem :: System -> String
 printLogicSystem x = name x ++ " (" ++ shortName x ++ ")"
+
+chooseSystem :: String -> Maybe System
+chooseSystem = (Map.!?) logicSystemsMap
 
 logicSystemsMap :: Map.Map String System
 logicSystemsMap =
