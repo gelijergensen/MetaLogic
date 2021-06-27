@@ -83,4 +83,4 @@ unNamedFormula :: Stream s m Char => ParsecT s u m UserInput
 unNamedFormula = do
   form <- many anyChar
   eof
-  return $ NewFormula "this" form
+  return $ NewFormula "_" form

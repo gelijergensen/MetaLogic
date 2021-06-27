@@ -17,19 +17,57 @@ import qualified PolynomialRings as PR
 import qualified ReplParser
 
 data System = forall s.
-  LS.LogicSystem s =>
+  (HasEnv s, LS.LogicSystem s) =>
   System
   { name :: String,
     shortName :: String,
     system :: s
   }
 
--- data Envs
---   = forall s.
---     LS.LogicSystem s =>
---     Envs (Map.Map String (Map.Map Identifier (LS.Formula s String)))
+data Env = forall s.
+  LS.LogicSystem s =>
+  Env
+  { formulas :: Map.Map Identifier (LS.Formula s String),
+    unnamedFormula :: Maybe (LS.Formula s String)
+  }
 
--- newtype Identifier = Identifier {getID :: String}
+newtype Identifier = Identifier {getID :: String}
+
+type Envs = Map.Map String Env
+
+class HasEnv a where
+  emptyEnv :: a -> Env
+
+instance HasEnv System where
+  emptyEnv System {system = sys} = emptyEnv sys
+
+instance HasEnv CPL.PropositionalLogic where
+  emptyEnv sys =
+    Env
+      { formulas = Map.empty :: Map.Map Identifier (CPL.PropFormula String),
+        unnamedFormula = Nothing
+      }
+
+instance HasEnv IPL.PropositionalLogic where
+  emptyEnv sys =
+    Env
+      { formulas = Map.empty :: Map.Map Identifier (IPL.PropFormula String),
+        unnamedFormula = Nothing
+      }
+
+instance HasEnv PA.PeanoArithmetic where
+  emptyEnv sys =
+    Env
+      { formulas = Map.empty :: Map.Map Identifier (PA.PeanoFormula String),
+        unnamedFormula = Nothing
+      }
+
+instance HasEnv PR.PolynomialRings where
+  emptyEnv sys =
+    Env
+      { formulas = Map.empty :: Map.Map Identifier (PR.Polynomial String),
+        unnamedFormula = Nothing
+      }
 
 main :: IO ()
 main = startup
@@ -78,14 +116,14 @@ startRepl currentSystem = do
       ++ "on it by typing \":step <name>\" or a complete rewrite by typing "
       ++ "\":rewrite <name>\". If no name is given, the last unnamed formula "
       ++ "will be used."
-  repl currentSystem
+  repl emptyEnvMap currentSystem
 
-repl :: System -> IO ()
-repl currentSystem = do
+repl :: Envs -> System -> IO ()
+repl envs currentSystem = do
   ins <- ReplParser.parseInput <$> getLine
   case ins of
     ReplParser.Quit -> quit
-    ReplParser.Help -> help *> repl currentSystem
+    ReplParser.Help -> help *> repl envs currentSystem
     ReplParser.NewSystem sys -> case chooseSystem sys of
       Nothing -> do
         putStrLn $
@@ -93,10 +131,11 @@ repl currentSystem = do
             ++ name currentSystem
             ++ ". You can choose from"
         putStrLn $ unlines $ map printLogicSystem availableLogicSystems
-        repl currentSystem
+        repl envs currentSystem
       Just newSystem -> do
         putStrLn $ "Switched to " ++ name newSystem ++ "."
-        repl newSystem
+        repl envs newSystem
+    --todo formulas
     x -> print x *> notImplemented
 
 help :: IO ()
@@ -121,13 +160,11 @@ help = do
       ++ "In rare situations, it might be necessary to wrap the formula in "
       ++ "parentheses for it to be interpreted correctly."
 
---------- User input ----------
--- handleInput :: (String -> UserInput) -> IO UserInput
--- handleInput f = withQuit f <$> getLine
-
--- withQuit :: (String -> UserInput) -> String -> UserInput
--- withQuit _ "quit" = Quit
--- withQuit f x = f x
+--------- Envs ----------
+emptyEnvMap :: Envs
+emptyEnvMap =
+  Map.fromList $
+    map (\x -> (name x, emptyEnv x)) availableLogicSystems
 
 --------- Logic Systems ----------
 printLogicSystem :: System -> String
