@@ -1,5 +1,9 @@
 # Revision history for MetaLogic
 
+## 0.1.7.1 -- 2021-6-29
+
+* Polynomials are now much easier to read in the repl
+
 ## 0.1.7.0 -- 2021-06-29
 
 * Added calculator executable
