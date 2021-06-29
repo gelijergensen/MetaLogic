@@ -28,6 +28,8 @@ import qualified ReplParser
 data StringInterpreter
   = IntCPL (CPL.PropositionalLogicInterpreter String)
   | IntIPL (IPL.PropositionalLogicInterpreter String)
+  | IntPA (PA.PeanoArithmeticInterpreter String)
+  | IntPR (PR.PolynomialRingsInterpreter String)
 
 data System = System
   { name :: String,
@@ -43,6 +45,8 @@ data Env t a = Env
 data StringEnv
   = EnvCPL (Env CPL.PropositionalLogic String)
   | EnvIPL (Env IPL.PropositionalLogic String)
+  | EnvPA (Env PA.PeanoArithmetic String)
+  | EnvPR (Env PR.PolynomialRings String)
 
 type Envs = Map.Map String StringEnv
 
@@ -177,6 +181,8 @@ list envs sys = sequence_ printAll *> putStrLn ""
     printAll = case envs Map.!? name sys of
       Just (EnvCPL env) -> mapMEnv printFormula env
       Just (EnvIPL env) -> mapMEnv printFormula env
+      Just (EnvPA env) -> mapMEnv printFormula env
+      Just (EnvPR env) -> mapMEnv printFormula env
       Nothing ->
         error $ "No env found for " ++ show (name sys) ++ " in Main.list"
 
@@ -190,6 +196,8 @@ emptyEnv :: System -> StringEnv
 emptyEnv sys = case interpreter sys of
   IntCPL _ -> EnvCPL env
   IntIPL _ -> EnvIPL env
+  IntPA _ -> EnvPA env
+  IntPR _ -> EnvPR env
   where
     env = Env {formulas = Map.empty, unnamedFormula = Nothing}
 
@@ -218,6 +226,10 @@ parseAndAddFormula envs sys (id, formString) =
         EnvCPL . addFormula env id <$> parseAndInterpret i formString
       (Just (EnvIPL env), IntIPL i) ->
         EnvIPL . addFormula env id <$> parseAndInterpret i formString
+      (Just (EnvPA env), IntPA i) ->
+        EnvPA . addFormula env id <$> parseAndInterpret i formString
+      (Just (EnvPR env), IntPR i) ->
+        EnvPR . addFormula env id <$> parseAndInterpret i formString
       _ -> error "Mismatched interpreter and env in Main.parseAndAddFormula"
 
 addFormula :: Env t a -> Identifier -> LS.Formula t a -> Env t a
@@ -234,6 +246,8 @@ stepFormula :: Identifier -> StringEnv -> IO StringEnv
 stepFormula id senv = case senv of
   EnvCPL env -> EnvCPL <$> doStep CPL.PropositionalLogic env
   EnvIPL env -> EnvIPL <$> doStep IPL.PropositionalLogic env
+  EnvPA env -> EnvPA <$> doStep PA.PeanoArithmetic env
+  EnvPR env -> EnvPR <$> doStep PR.PolynomialRings env
   where
     doStep logicsys env =
       maybe
@@ -245,6 +259,8 @@ rewriteFormula :: Identifier -> StringEnv -> IO StringEnv
 rewriteFormula id senv = case senv of
   EnvCPL env -> EnvCPL <$> doStep CPL.PropositionalLogic env
   EnvIPL env -> EnvIPL <$> doStep IPL.PropositionalLogic env
+  EnvPA env -> EnvPA <$> doStep PA.PeanoArithmetic env
+  EnvPR env -> EnvPR <$> doStep PR.PolynomialRings env
   where
     doStep logicsys env =
       maybe
@@ -306,15 +322,15 @@ availableLogicSystems =
     System
       "Intuitionistic Propositional Logic"
       "IPL"
-      (IntIPL IPL.defaultPropositionalLogicInterpreter)
-      -- System
-      --   "Peano Arithmetic"
-      --   "PA"
-      --   PA.defaultPeanoArithmeticInterpreter,
-      -- System
-      --   "Polynomial Rings"
-      --   "PR"
-      --   PR.defaultPolynomialRingsInterpreter
+      (IntIPL IPL.defaultPropositionalLogicInterpreter),
+    System
+      "Peano Arithmetic"
+      "PA"
+      (IntPA PA.defaultPeanoArithmeticInterpreter),
+    System
+      "Polynomial Rings"
+      "PR"
+      (IntPR PR.defaultPolynomialRingsInterpreter)
   ]
 
 --------- Library Shorthands ----------
