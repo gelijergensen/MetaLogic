@@ -11,9 +11,9 @@
 module Main where
 
 import qualified ClassicalPropositionalLogic as CPL
-import Control.Monad ((<=<), (>=>))
+import Control.Monad (foldM, (<=<), (>=>))
 import Data.Either (fromRight)
-import Data.Functor ((<&>))
+import Data.Functor (($>), (<&>))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified ErrorHandling as EH
@@ -35,9 +35,9 @@ data System = System
     interpreter :: StringInterpreter
   }
 
-data Env a b = Env
-  { formulas :: Map.Map Identifier (LS.Formula a b),
-    unnamedFormula :: Maybe (LS.Formula a b)
+data Env t a = Env
+  { formulas :: Map.Map Identifier (LS.Formula t a),
+    unnamedFormula :: Maybe (LS.Formula t a)
   }
 
 data StringEnv
@@ -64,6 +64,7 @@ startup = do
       putStrLn $ unlines $ map printLogicSystem availableLogicSystems
       ins <- getLine
       case ins of
+        ":q" -> quit
         ":quit" -> quit
         ":h" -> help
         ":help" -> help
@@ -117,10 +118,20 @@ repl envs currentSystem = do
         putStrLn $ "Switched to " ++ name newSystem ++ "."
         repl envs newSystem
     ReplParser.NewFormula idString formString ->
-      case parseAndAddFormula envs currentSystem (Identifier idString, formString) of
-        Left err -> print err *> repl envs currentSystem
-        Right newEnvs -> repl newEnvs currentSystem
-    --todo formulas
+      let id = Identifier idString
+       in case parseAndAddFormula envs currentSystem (id, formString) of
+            Left err -> print err *> repl envs currentSystem
+            Right newEnvs -> do
+              putStrLn ""
+              repl newEnvs currentSystem
+    ReplParser.Step idString -> do
+      newEnvs <-
+        Map.alterF
+          (mapM (stepFormula (Identifier idString)))
+          (name currentSystem)
+          envs
+      putStrLn ""
+      repl newEnvs currentSystem
     x -> print x *> notImplemented
 
 help :: IO ()
@@ -149,8 +160,6 @@ help = do
 list :: Envs -> System -> IO ()
 list envs sys = sequence_ (mapMEnv printFormula env) *> putStrLn ""
   where
-    printFormula (Identifier idString, form) =
-      putStrLn $ idString ++ " = " ++ show form
     env = case envs Map.!? name sys of
       Just (EnvCPL env) -> env
       _ -> error "Unexpected env in Main.list"
@@ -168,13 +177,19 @@ emptyEnv sys = case interpreter sys of
   where
     env = Env {formulas = Map.empty, unnamedFormula = Nothing}
 
-mapMEnv :: ((Identifier, LS.Formula a b) -> c) -> Env a b -> [c]
+mapMEnv :: ((Identifier, LS.Formula t a) -> c) -> Env t a -> [c]
 mapMEnv f env = map f $ namedFormulaPairs ++ unnamedFormulaPair
   where
     namedFormulaPairs = Map.assocs $ formulas env
     unnamedFormulaPair = case unnamedFormula env of
       Nothing -> []
       Just x -> [(Identifier "_", x)]
+
+--------- Formulas ---------
+printFormula ::
+  Show (LS.Formula t String) => (Identifier, LS.Formula t String) -> IO ()
+printFormula (Identifier idString, form) =
+  putStrLn $ idString ++ " = " ++ show form
 
 parseAndAddFormula ::
   Envs -> System -> (Identifier, String) -> Either EH.Error Envs
@@ -189,7 +204,7 @@ parseAndAddFormula envs sys (id, formString) =
         EnvIPL . addFormula env id <$> parseAndInterpret i formString
       _ -> error "Mismatched interpreter and env in Main.parseAndAddFormula"
 
-addFormula :: Env a b -> Identifier -> LS.Formula a b -> Env a b
+addFormula :: Env t a -> Identifier -> LS.Formula t a -> Env t a
 addFormula env id form
   | id == Identifier "_" =
     Env {formulas = formulas env, unnamedFormula = Just form}
@@ -198,6 +213,50 @@ addFormula env id form
       { formulas = Map.insert id form (formulas env),
         unnamedFormula = unnamedFormula env
       }
+
+stepFormula :: Identifier -> StringEnv -> IO StringEnv
+stepFormula id senv = case senv of
+  EnvCPL env -> EnvCPL <$> doStep CPL.PropositionalLogic env
+  EnvIPL env -> EnvIPL <$> doStep IPL.PropositionalLogic env
+  where
+    doStep logicsys env =
+      maybe
+        (pure env)
+        (insertFormulas env id . LS.rewriteOnce logicsys)
+        (getFormula env id)
+
+insertFormulas ::
+  Show (LS.Formula t String) =>
+  Env t String ->
+  Identifier ->
+  Set.Set (LS.Formula t String) ->
+  IO (Env t String)
+insertFormulas env id formulasSet =
+  newFormulas
+    <&> ( \x ->
+            Env
+              { formulas = x,
+                unnamedFormula = unnamedFormula env
+              }
+        )
+  where
+    newFormulas =
+      foldM
+        ( \acc (i, form) ->
+            let newKey = newID id i
+             in printFormula (newKey, form) $> Map.insert newKey form acc
+        )
+        (formulas env)
+        . zip [0, 1 ..]
+        . Set.toDescList
+        $ formulasSet
+    newID (Identifier "_") i = Identifier $ "_" ++ show i
+    newID (Identifier idString) i = Identifier $ idString ++ "_" ++ show i
+
+getFormula :: Env t a -> Identifier -> Maybe (LS.Formula t a)
+getFormula env id = case id of
+  Identifier "_" -> unnamedFormula env
+  id -> formulas env Map.!? id
 
 --------- Logic Systems ----------
 printLogicSystem :: System -> String

@@ -79,11 +79,21 @@ setSystem = do
   return $ NewSystem x
 
 step :: Stream s m Char => ParsecT s u m UserInput
-step = do
+step = try namedStep <|> unNamedStep
+
+namedStep :: Stream s m Char => ParsecT s u m UserInput
+namedStep = do
   string "step"
-  x <- many anyChar
+  x <- between spaces spaces (many1 alphaNumOrUnderscore)
   eof
   return $ Step x
+
+unNamedStep :: Stream s m Char => ParsecT s u m UserInput
+unNamedStep = do
+  string "step"
+  spaces
+  eof
+  return $ Step "_"
 
 rewrite :: Stream s m Char => ParsecT s u m UserInput
 rewrite = do
@@ -97,7 +107,7 @@ formula = try namedFormula <|> unNamedFormula
 
 namedFormula :: Stream s m Char => ParsecT s u m UserInput
 namedFormula = do
-  name <- between spaces spaces (many1 alphaNum)
+  name <- between spaces spaces (many1 alphaNumOrUnderscore)
   char '='
   form <- many anyChar
   eof
@@ -108,3 +118,6 @@ unNamedFormula = do
   form <- many anyChar
   eof
   return $ NewFormula "_" form
+
+alphaNumOrUnderscore :: Stream s m Char => ParsecT s u m Char
+alphaNumOrUnderscore = alphaNum <|> char '_'
