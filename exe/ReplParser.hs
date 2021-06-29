@@ -97,11 +97,21 @@ unNamedStep = do
   return $ Step "_"
 
 rewrite :: Stream s m Char => ParsecT s u m UserInput
-rewrite = do
+rewrite = try namedRewrite <|> unNamedRewrite
+
+namedRewrite :: Stream s m Char => ParsecT s u m UserInput
+namedRewrite = do
   string "rewrite"
-  x <- many anyChar
+  x <- between spaces spaces (many1 alphaNumOrUnderscore)
   eof
-  return $ Step x
+  return $ Rewrite x
+
+unNamedRewrite :: Stream s m Char => ParsecT s u m UserInput
+unNamedRewrite = do
+  string "rewrite"
+  spaces
+  eof
+  return $ Rewrite "_"
 
 doNothing :: Stream s m Char => ParsecT s u m UserInput
 doNothing = try (spaces *> eof) $> DoNothing

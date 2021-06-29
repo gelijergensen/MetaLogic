@@ -17,7 +17,7 @@ import Data.Functor (($>), (<&>))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified ErrorHandling as EH
-import qualified Interpreter as I
+import Interpreter (Interpreter (LogicSystem), interpret)
 import qualified IntuitionisticPropositionalLogic as IPL
 import qualified LogicSystem as LS
 import Parser (parseAST)
@@ -133,7 +133,20 @@ repl envs currentSystem = do
           envs
       putStrLn ""
       repl newEnvs currentSystem
-    x -> print x *> notImplemented
+    ReplParser.Rewrite idString -> do
+      newEnvs <-
+        Map.alterF
+          (mapM (rewriteFormula (Identifier idString)))
+          (name currentSystem)
+          envs
+      putStrLn ""
+      repl newEnvs currentSystem
+    ReplParser.Undetermined ->
+      do
+        putStrLn $
+          "I don't recognize that command. You can type "
+            ++ "\":help\" or \":h\" for a list of valid commands"
+        repl envs currentSystem
 
 help :: IO ()
 help = do
@@ -159,11 +172,13 @@ help = do
       ++ "parentheses for it to be interpreted correctly."
 
 list :: Envs -> System -> IO ()
-list envs sys = sequence_ (mapMEnv printFormula env) *> putStrLn ""
+list envs sys = sequence_ printAll *> putStrLn ""
   where
-    env = case envs Map.!? name sys of
-      Just (EnvCPL env) -> env
-      _ -> error "Unexpected env in Main.list"
+    printAll = case envs Map.!? name sys of
+      Just (EnvCPL env) -> mapMEnv printFormula env
+      Just (EnvIPL env) -> mapMEnv printFormula env
+      Nothing ->
+        error $ "No env found for " ++ show (name sys) ++ " in Main.list"
 
 --------- Envs ----------
 emptyEnvMap :: Envs
@@ -224,6 +239,17 @@ stepFormula id senv = case senv of
       maybe
         (pure env)
         (insertFormulas env id . LS.rewriteOnce logicsys)
+        (getFormula env id)
+
+rewriteFormula :: Identifier -> StringEnv -> IO StringEnv
+rewriteFormula id senv = case senv of
+  EnvCPL env -> EnvCPL <$> doStep CPL.PropositionalLogic env
+  EnvIPL env -> EnvIPL <$> doStep IPL.PropositionalLogic env
+  where
+    doStep logicsys env =
+      maybe
+        (pure env)
+        (insertFormulas env id . LS.rewrite logicsys)
         (getFormula env id)
 
 insertFormulas ::
@@ -293,22 +319,8 @@ availableLogicSystems =
 
 --------- Library Shorthands ----------
 parseAndInterpret ::
-  I.Interpreter i String b =>
+  Interpreter i String b =>
   i ->
   String ->
-  Either EH.Error (LS.Formula (I.LogicSystem i) b)
-parseAndInterpret i = parseAST >=> I.interpret i
-
-rewriteClassicalProp ::
-  Ord a => CPL.PropFormula a -> Set.Set (CPL.PropFormula a)
-rewriteClassicalProp = LS.rewrite CPL.PropositionalLogic
-
-rewriteIntuitionisticProp ::
-  Ord a => IPL.PropFormula a -> Set.Set (IPL.PropFormula a)
-rewriteIntuitionisticProp = LS.rewrite IPL.PropositionalLogic
-
-rewritePeano :: Ord a => PA.PeanoFormula a -> Set.Set (PA.PeanoFormula a)
-rewritePeano = LS.rewrite PA.PeanoArithmetic
-
-rewritePolynomial :: Ord a => PR.Polynomial a -> Set.Set (PR.Polynomial a)
-rewritePolynomial = LS.rewrite PR.PolynomialRings
+  Either EH.Error (LS.Formula (LogicSystem i) b)
+parseAndInterpret i = parseAST >=> interpret i
