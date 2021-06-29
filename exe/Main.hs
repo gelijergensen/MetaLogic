@@ -106,6 +106,7 @@ repl envs currentSystem = do
     ReplParser.Quit -> quit
     ReplParser.Help -> help *> repl envs currentSystem
     ReplParser.List -> list envs currentSystem *> repl envs currentSystem
+    ReplParser.DoNothing -> repl envs currentSystem
     ReplParser.NewSystem sys -> case chooseSystem sys of
       Nothing -> do
         putStrLn $

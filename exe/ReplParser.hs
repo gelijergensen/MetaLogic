@@ -9,6 +9,7 @@ data UserInput
   = Quit
   | Help
   | List
+  | DoNothing -- when someone just enters spaces
   | NewSystem String
   | NewFormula String String
   | Step String
@@ -22,7 +23,7 @@ parseInput x = case parse input "repl" x of
   Left _ -> Undetermined
 
 input :: Stream s m Char => ParsecT s u m UserInput
-input = command <|> formula
+input = command <|> doNothing <|> formula
 
 command :: Stream s m Char => ParsecT s u m UserInput
 command = char ':' *> tryOneOf [quit, help, list, setSystem, step, rewrite]
@@ -101,6 +102,9 @@ rewrite = do
   x <- many anyChar
   eof
   return $ Step x
+
+doNothing :: Stream s m Char => ParsecT s u m UserInput
+doNothing = try (spaces *> eof) $> DoNothing
 
 formula :: Stream s m Char => ParsecT s u m UserInput
 formula = try namedFormula <|> unNamedFormula
