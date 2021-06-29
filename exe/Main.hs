@@ -1,14 +1,23 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+-- {-# LANGUAGE ScopedTypeVariables #-}
+
+-- {-# LANGUAGE ExistentialQuantification #-}
+-- {-# LANGUAGE FlexibleContexts #-}
+-- {-# LANGUAGE FlexibleInstances #-}
+-- {-# LANGUAGE TypeFamilies #-}
+-- {-# LANGUAGE UndecidableInstances #-}
 
 module Main where
 
 import qualified ClassicalPropositionalLogic as CPL
 import Control.Monad ((<=<), (>=>))
 import Data.Either (fromRight)
+import Data.Functor ((<&>))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified ErrorHandling as EH
-import Interpreter (Interpreter (LogicSystem), interpret)
+import qualified Interpreter as I
 import qualified IntuitionisticPropositionalLogic as IPL
 import qualified LogicSystem as LS
 import Parser (parseAST)
@@ -16,58 +25,28 @@ import qualified PeanoArithmetic as PA
 import qualified PolynomialRings as PR
 import qualified ReplParser
 
-data System = forall s.
-  (HasEnv s, LS.LogicSystem s) =>
-  System
+data StringInterpreter
+  = IntCPL (CPL.PropositionalLogicInterpreter String)
+  | IntIPL (IPL.PropositionalLogicInterpreter String)
+
+data System = System
   { name :: String,
     shortName :: String,
-    system :: s
+    interpreter :: StringInterpreter
   }
 
-data Env = forall s.
-  LS.LogicSystem s =>
-  Env
-  { formulas :: Map.Map Identifier (LS.Formula s String),
-    unnamedFormula :: Maybe (LS.Formula s String)
+data Env a b = Env
+  { formulas :: Map.Map Identifier (LS.Formula a b),
+    unnamedFormula :: Maybe (LS.Formula a b)
   }
 
-newtype Identifier = Identifier {getID :: String}
+data StringEnv
+  = EnvCPL (Env CPL.PropositionalLogic String)
+  | EnvIPL (Env IPL.PropositionalLogic String)
 
-type Envs = Map.Map String Env
+type Envs = Map.Map String StringEnv
 
-class HasEnv a where
-  emptyEnv :: a -> Env
-
-instance HasEnv System where
-  emptyEnv System {system = sys} = emptyEnv sys
-
-instance HasEnv CPL.PropositionalLogic where
-  emptyEnv sys =
-    Env
-      { formulas = Map.empty :: Map.Map Identifier (CPL.PropFormula String),
-        unnamedFormula = Nothing
-      }
-
-instance HasEnv IPL.PropositionalLogic where
-  emptyEnv sys =
-    Env
-      { formulas = Map.empty :: Map.Map Identifier (IPL.PropFormula String),
-        unnamedFormula = Nothing
-      }
-
-instance HasEnv PA.PeanoArithmetic where
-  emptyEnv sys =
-    Env
-      { formulas = Map.empty :: Map.Map Identifier (PA.PeanoFormula String),
-        unnamedFormula = Nothing
-      }
-
-instance HasEnv PR.PolynomialRings where
-  emptyEnv sys =
-    Env
-      { formulas = Map.empty :: Map.Map Identifier (PR.Polynomial String),
-        unnamedFormula = Nothing
-      }
+newtype Identifier = Identifier {getID :: String} deriving (Eq, Ord)
 
 main :: IO ()
 main = startup
@@ -116,6 +95,7 @@ startRepl currentSystem = do
       ++ "on it by typing \":step <name>\" or a complete rewrite by typing "
       ++ "\":rewrite <name>\". If no name is given, the last unnamed formula "
       ++ "will be used."
+  putStrLn "To list available formulas, type \":list\" or \":l\" at any time."
   repl emptyEnvMap currentSystem
 
 repl :: Envs -> System -> IO ()
@@ -124,6 +104,7 @@ repl envs currentSystem = do
   case ins of
     ReplParser.Quit -> quit
     ReplParser.Help -> help *> repl envs currentSystem
+    ReplParser.List -> list envs currentSystem *> repl envs currentSystem
     ReplParser.NewSystem sys -> case chooseSystem sys of
       Nothing -> do
         putStrLn $
@@ -135,13 +116,18 @@ repl envs currentSystem = do
       Just newSystem -> do
         putStrLn $ "Switched to " ++ name newSystem ++ "."
         repl envs newSystem
+    ReplParser.NewFormula idString formString ->
+      case parseAndAddFormula envs currentSystem (Identifier idString, formString) of
+        Left err -> print err *> repl envs currentSystem
+        Right newEnvs -> repl newEnvs currentSystem
     --todo formulas
     x -> print x *> notImplemented
 
 help :: IO ()
 help = do
   putStrLn "Typing \":help\" or \":h\" shows this help."
-  putStrLn "You can quit at any time by typing \":quit\"."
+  putStrLn "You can quit at any time by typing \":quit\" or \":q\"."
+  putStrLn "For a list of available formulas, type \":list\" or \":l\"."
   putStrLn $
     "You can choose a new logical system by typing "
       ++ "\":set system\" followed by a logic system name."
@@ -160,11 +146,58 @@ help = do
       ++ "In rare situations, it might be necessary to wrap the formula in "
       ++ "parentheses for it to be interpreted correctly."
 
+list :: Envs -> System -> IO ()
+list envs sys = sequence_ (mapMEnv printFormula env) *> putStrLn ""
+  where
+    printFormula (Identifier idString, form) =
+      putStrLn $ idString ++ " = " ++ show form
+    env = case envs Map.!? name sys of
+      Just (EnvCPL env) -> env
+      _ -> error "Unexpected env in Main.list"
+
 --------- Envs ----------
 emptyEnvMap :: Envs
 emptyEnvMap =
   Map.fromList $
     map (\x -> (name x, emptyEnv x)) availableLogicSystems
+
+emptyEnv :: System -> StringEnv
+emptyEnv sys = case interpreter sys of
+  IntCPL _ -> EnvCPL env
+  IntIPL _ -> EnvIPL env
+  where
+    env = Env {formulas = Map.empty, unnamedFormula = Nothing}
+
+mapMEnv :: ((Identifier, LS.Formula a b) -> c) -> Env a b -> [c]
+mapMEnv f env = map f $ namedFormulaPairs ++ unnamedFormulaPair
+  where
+    namedFormulaPairs = Map.assocs $ formulas env
+    unnamedFormulaPair = case unnamedFormula env of
+      Nothing -> []
+      Just x -> [(Identifier "_", x)]
+
+parseAndAddFormula ::
+  Envs -> System -> (Identifier, String) -> Either EH.Error Envs
+parseAndAddFormula envs sys (id, formString) =
+  (\x -> Map.insert envKey x envs) <$> newEnv
+  where
+    envKey = name sys
+    newEnv = case (envs Map.!? envKey, interpreter sys) of
+      (Just (EnvCPL env), IntCPL i) ->
+        EnvCPL . addFormula env id <$> parseAndInterpret i formString
+      (Just (EnvIPL env), IntIPL i) ->
+        EnvIPL . addFormula env id <$> parseAndInterpret i formString
+      _ -> error "Mismatched interpreter and env in Main.parseAndAddFormula"
+
+addFormula :: Env a b -> Identifier -> LS.Formula a b -> Env a b
+addFormula env id form
+  | id == Identifier "_" =
+    Env {formulas = formulas env, unnamedFormula = Just form}
+  | otherwise =
+    Env
+      { formulas = Map.insert id form (formulas env),
+        unnamedFormula = unnamedFormula env
+      }
 
 --------- Logic Systems ----------
 printLogicSystem :: System -> String
@@ -180,50 +213,42 @@ logicSystemsMap =
 
 availableLogicSystems :: [System]
 availableLogicSystems =
-  [ System "Classical Propositional Logic" "CPL" CPL.PropositionalLogic,
-    System "Intuitionistic Propositional Logic" "IPL" IPL.PropositionalLogic,
-    System "Peano Arithmetic" "PA" PA.PeanoArithmetic,
-    System "Polynomial Rings" "PR" PR.PolynomialRings
+  [ System
+      "Classical Propositional Logic"
+      "CPL"
+      (IntCPL CPL.defaultPropositionalLogicInterpreter),
+    System
+      "Intuitionistic Propositional Logic"
+      "IPL"
+      (IntIPL IPL.defaultPropositionalLogicInterpreter)
+      -- System
+      --   "Peano Arithmetic"
+      --   "PA"
+      --   PA.defaultPeanoArithmeticInterpreter,
+      -- System
+      --   "Polynomial Rings"
+      --   "PR"
+      --   PR.defaultPolynomialRingsInterpreter
   ]
 
 --------- Library Shorthands ----------
-parseAsClassicalPropFormula ::
-  String -> Either EH.Error (CPL.PropFormula String)
-parseAsClassicalPropFormula =
-  interpret CPL.defaultPropositionalLogicInterpreter
-    <=< parseAST
+parseAndInterpret ::
+  I.Interpreter i String b =>
+  i ->
+  String ->
+  Either EH.Error (LS.Formula (I.LogicSystem i) b)
+parseAndInterpret i = parseAST >=> I.interpret i
 
 rewriteClassicalProp ::
   Ord a => CPL.PropFormula a -> Set.Set (CPL.PropFormula a)
 rewriteClassicalProp = LS.rewrite CPL.PropositionalLogic
 
-parseAsIntuitionisticPropFormula ::
-  String -> Either EH.Error (IPL.PropFormula String)
-parseAsIntuitionisticPropFormula =
-  interpret IPL.defaultPropositionalLogicInterpreter
-    <=< parseAST
-
 rewriteIntuitionisticProp ::
   Ord a => IPL.PropFormula a -> Set.Set (IPL.PropFormula a)
 rewriteIntuitionisticProp = LS.rewrite IPL.PropositionalLogic
 
-parseAsPeanoFormula ::
-  String -> Either EH.Error (PA.PeanoFormula String)
-parseAsPeanoFormula =
-  interpret PA.defaultPeanoArithmeticInterpreter
-    <=< parseAST
-
 rewritePeano :: Ord a => PA.PeanoFormula a -> Set.Set (PA.PeanoFormula a)
 rewritePeano = LS.rewrite PA.PeanoArithmetic
 
-parseAsPolynomial ::
-  String -> Either EH.Error (PR.Polynomial String)
-parseAsPolynomial =
-  interpret PR.defaultPolynomialRingsInterpreter
-    <=< parseAST
-
 rewritePolynomial :: Ord a => PR.Polynomial a -> Set.Set (PR.Polynomial a)
 rewritePolynomial = LS.rewrite PR.PolynomialRings
-
-unRight :: Either a b -> b
-unRight = fromRight undefined

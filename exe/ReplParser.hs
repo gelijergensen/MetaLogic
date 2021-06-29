@@ -8,6 +8,7 @@ import Text.Parsec
 data UserInput
   = Quit
   | Help
+  | List
   | NewSystem String
   | NewFormula String String
   | Step String
@@ -24,13 +25,23 @@ input :: Stream s m Char => ParsecT s u m UserInput
 input = command <|> formula
 
 command :: Stream s m Char => ParsecT s u m UserInput
-command = char ':' *> tryOneOf [quit, help, setSystem, step, rewrite]
+command = char ':' *> tryOneOf [quit, help, list, setSystem, step, rewrite]
 
 tryOneOf :: Stream s m t => [ParsecT s u m a] -> ParsecT s u m a
 tryOneOf = choice . map try
 
 quit :: Stream s m Char => ParsecT s u m UserInput
-quit = string "quit" *> eof $> Quit
+quit =
+  ( try
+      ( string "quit"
+          *> eof
+      )
+      <|> try
+        ( char 'q'
+            *> eof
+        )
+  )
+    $> Quit
 
 help :: Stream s m Char => ParsecT s u m UserInput
 help =
@@ -44,6 +55,19 @@ help =
         )
   )
     $> Help
+
+list :: Stream s m Char => ParsecT s u m UserInput
+list =
+  ( try
+      ( string "list"
+          *> eof
+      )
+      <|> try
+        ( char 'l'
+            *> eof
+        )
+  )
+    $> List
 
 setSystem :: Stream s m Char => ParsecT s u m UserInput
 setSystem = do
