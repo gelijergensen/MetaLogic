@@ -29,7 +29,7 @@ instance LS.LogicSystem PolynomialRings where
     | NEG (Polynomial a)
     | PLUS (MultiSet.MultiSet (Polynomial a))
     | TIMES (MultiSet.MultiSet (Polynomial a))
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
 
   newtype Rule PolynomialRings a = Rule
     { runRule ::
@@ -56,6 +56,46 @@ instance LS.LogicSystem PolynomialRings where
         _distributive
       ]
   runRule = runRule
+
+instance Show a => Show (Polynomial a) where
+  showsPrec d ZERO = showString "0"
+  showsPrec d ONE = showString "1"
+  showsPrec d (CONSTANT a) = showsPrec d a
+  showsPrec d (VARIABLE a) = showsPrec d a
+  showsPrec d (NEG a) =
+    showParen (d > app_prec) $
+      showString "-" . showsPrec d a
+    where
+      app_prec = 10
+  showsPrec d (PLUS as) =
+    showParen (d > app_prec) $ showOccurList $ MultiSet.toOccurList as
+    where
+      showOccurList [] s = s
+      showOccurList (x : xs) s =
+        showTerm x $ _showList xs
+        where
+          _showList [] = s
+          _showList (y : ys) = case y of
+            (NEG y', i) -> showString " - " . showTerm (y', i) $ _showList ys
+            _ -> showString " + " . showTerm y $ _showList ys
+      showTerm (x, 1) = showsPrec (app_prec + 1) x
+      showTerm (x, i) = case x of
+        NEG x' ->
+          showString "-" . shows i . showString "*" . showsPrec (app_prec + 1) x'
+        _ -> shows i . showString "*" . showsPrec (app_prec + 1) x
+      app_prec = 9
+  showsPrec d (TIMES as) =
+    showParen (d > app_prec) $ showOccurList $ MultiSet.toOccurList as
+    where
+      showOccurList [] s = s
+      showOccurList (x : xs) s =
+        showTerm x $ _showList xs
+        where
+          _showList [] = s
+          _showList (y : ys) = showString "*" . showTerm y $ _showList ys
+      showTerm (x, 1) = showsPrec (app_prec + 1) x
+      showTerm (x, i) = showsPrec (app_prec + 1) x . showString "^" . shows i
+      app_prec = 10
 
 mapFormula ::
   Ord (Polynomial a) =>
@@ -131,11 +171,6 @@ _plusNeg (PLUS xs) =
       MultiSet.union
         (MultiSet.filter (== NEG x) ys)
         (MultiSet.filter ((== x) . NEG) ys)
--- unNeg (NEG x) = x
--- unNeg _ = error "Expected NEG in _plusNeg"
--- (neg, pos) = MultiSet.partition isNeg xs
--- isNeg (NEG _) = True
--- isNeg _ = False
 _plusNeg x = x
 
 _plusSingle :: Polynomial a -> Polynomial a
