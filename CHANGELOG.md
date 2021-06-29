@@ -1,5 +1,9 @@
 # Revision history for MetaLogic
 
+## 0.1.7.0 -- 2021-06-29
+
+* Added calculator executable
+
 ## 0.1.6.0 -- 2021-06-20
 
 * Logic system for intuitionistic propositional logic added

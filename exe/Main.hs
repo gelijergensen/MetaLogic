@@ -1,13 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 
--- {-# LANGUAGE ScopedTypeVariables #-}
-
--- {-# LANGUAGE ExistentialQuantification #-}
--- {-# LANGUAGE FlexibleContexts #-}
--- {-# LANGUAGE FlexibleInstances #-}
--- {-# LANGUAGE TypeFamilies #-}
--- {-# LANGUAGE UndecidableInstances #-}
-
 module Main where
 
 import qualified ClassicalPropositionalLogic as CPL
