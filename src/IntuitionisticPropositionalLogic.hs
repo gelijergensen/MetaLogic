@@ -23,10 +23,10 @@ instance LS.LogicSystem PropositionalLogic where
     = TRUE
     | FALSE
     | VAR a
-    | NOT (PropFormula a)
     | OR (PropFormula a) (PropFormula a)
     | AND (PropFormula a) (PropFormula a)
     | IMPLIES (PropFormula a) (PropFormula a)
+    | NOT (PropFormula a)
     deriving (Eq, Ord, Show)
 
   newtype Rule PropositionalLogic a = Rule
