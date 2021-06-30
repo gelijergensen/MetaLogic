@@ -17,7 +17,7 @@ name:               MetaLogic
 version:            0.1.7.1
 
 -- A short (one-line) description of the package.
-synopsis:
+synopsis:           A simple calculator for general logic systems.
 
 -- A longer description of the package.
 -- description:
